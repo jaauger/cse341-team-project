@@ -565,3 +565,88 @@ article.booking-page {
         }
     }
 }
+
+/*
+ * Ticket card looks (Feature Set 4: Ticket Classes)
+ * PLAIN ENGLISH: Gives each ticket card one of three clear looks, using the
+ *   same sage-green colors as the rest of the site: available, selected, and
+ *   not available on the chosen day. Also styles the availability message.
+ * LOGIC: The colors come from the site's saved color names in
+ *   public/css/base/colors.css (for example, --clr-primary is the sage green on
+ *   the trips page buttons). Available cards get a light sage border. The
+ *   selected card is found with :has(), which checks whether the hidden radio
+ *   button inside the card is checked; it gets a full sage border, a sage ring
+ *   and a pale sage fill. JavaScript adds the class ticket-card-unavailable to
+ *   a card that is not offered that day, which gives it a darker gray fill, a
+ *   dark dashed border, faded contents and a dark label in the corner.
+ * WHY WE NEED IT: The assignment says unavailable ticket options must be
+ *   grayed out. The first gray was too close to the other cards, and the
+ *   booking page did not match the colors of the trips page. Now a customer
+ *   can tell at a glance what they can pick, what they picked, and what is off.
+ * LEARNING GAP: These rules sit at the end of the file with the same selector
+ *   strength as the original card rules near the top, so they win because they
+ *   come later. The original rules are not edited. This only changes the look:
+ *   what actually stops the click is the disabled setting that JavaScript puts
+ *   on the radio button. The label text comes from the CSS content property,
+ *   not from the HTML.
+ */
+article.booking-page .booking-form .ticket-selection {
+    .ticket-availability-message {
+        margin: 0 0 var(--space-md) 0;
+        padding: var(--space-sm) var(--space-md);
+        border: 1px solid var(--clr-border);
+        border-radius: var(--radius-md);
+        color: var(--clr-text-secondary);
+        font-size: var(--font-size-sm);
+    }
+
+    /* Available: white card with a light sage border */
+    .ticket-options .ticket-card {
+        border-color: var(--clr-primary-light);
+
+        &:hover {
+            border-color: var(--clr-primary);
+        }
+    }
+
+    /* Selected: full sage border, a sage ring, and a pale sage fill */
+    .ticket-options .ticket-card:has(input[type="radio"]:checked) {
+        border-color: var(--clr-primary);
+        box-shadow: 0 0 0 2px var(--clr-primary);
+
+        .ticket-content {
+            background-color: var(--clr-primary-pale);
+        }
+    }
+
+    /* Not available: darker gray, dark dashed border, dark corner label */
+    .ticket-options .ticket-card.ticket-card-unavailable {
+        cursor: not-allowed;
+        background-color: #cdd4d0;
+        border: 2px dashed var(--clr-text-secondary);
+        box-shadow: none;
+
+        &:hover {
+            border-color: var(--clr-text-secondary);
+            box-shadow: none;
+        }
+
+        &::after {
+            content: 'Not available on this day';
+            position: absolute;
+            top: var(--space-sm);
+            right: var(--space-sm);
+            padding: 2px var(--space-sm);
+            border-radius: var(--radius-md);
+            background-color: var(--clr-text-primary);
+            color: var(--clr-surface);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+
+        .ticket-content {
+            opacity: 0.6;
+            filter: grayscale(1);
+        }
+    }
+}
