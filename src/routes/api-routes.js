@@ -131,7 +131,7 @@ router.get('/ticket-classes', (req, res) => {
  *           minimum: 1
  *           maximum: 12
  *         description: Optional month number used to filter schedules.
-*     responses:
+ *     responses:
  *       '200':
  *         description: Successfully retrieved schedules. The array may be empty.
  *         content:
