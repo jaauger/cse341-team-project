@@ -6,6 +6,11 @@ import {
     getTicketClassesForDay
 } from '../controllers/ticket-classes.js';
 
+import {
+    getSchedulesForTrip,
+    getSchedulesForTripAndMonth
+} from '../controllers/schedules.js';
+
 const router = Router();
 
 
@@ -99,6 +104,53 @@ router.get('/ticket-classes', (req, res) => {
     }
 
     return getAllTicketClasses(req, res);
+});
+
+
+
+/**
+ * @openapi
+ * /trips/{id}/schedules:
+ *   get:
+ *     summary: Get schedules for a trip
+ *     description: Returns schedules for a trip, optionally filtered by month.
+ *     tags:
+ *       - Schedules
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique trip ID.
+ *       - in: query
+ *         name: month
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 12
+ *         description: Optional month number used to filter schedules.
+*     responses:
+ *       '200':
+ *         description: Successfully retrieved schedules. The array may be empty.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       '400':
+ *         description: Invalid month parameter.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/trips/:id/schedules', (req, res) => {
+    if (req.query.month !== undefined) {
+        return getSchedulesForTripAndMonth(req, res);
+    }
+
+    return getSchedulesForTrip(req, res);
 });
 
 export default router;

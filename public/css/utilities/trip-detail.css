@@ -178,6 +178,12 @@ article.route-detail {
                     min-width: 48px;
                     text-align: center;
                 }
+
+                .month-badge.selected {
+                    background-color: var(--clr-primary);
+                    color: var(--clr-text-alt-primary);
+                    border-color: var(--clr-primary);
+                }
             }
         }
 

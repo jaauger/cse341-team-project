@@ -1,11 +1,11 @@
 <%- include('../partials/header') %>
 
-<article class="route-detail">
+<article class="route-detail" data-trip-id="<%= details.id %>">
     <div class="route-header">
         <div class="route-header-content">
             <h1 class="route-name"><%= details.name %></h1>
             <p class="route-description"><%= details.description %></p>
-            
+
             <% if (details.highlights && details.highlights.length > 0) { %>
             <div class="highlights">
                 <% details.highlights.forEach(function(highlight) { %>
@@ -14,7 +14,7 @@
             </div>
             <% } %>
         </div>
-        
+
         <% if (details.imageUrl) { %>
         <div class="route-image">
             <img src="<%= details.imageUrl %>" alt="<%= details.name %>">
@@ -28,17 +28,17 @@
                 <span class="info-label">Region</span>
                 <span class="info-value region-<%= details.region %>"><%= details.region.charAt(0).toUpperCase() + details.region.slice(1) %></span>
             </div>
-            
+
             <div class="info-item">
                 <span class="info-label">Duration</span>
                 <span class="info-value"><%= details.duration %></span>
             </div>
-            
+
             <div class="info-item">
                 <span class="info-label">Distance</span>
                 <span class="info-value"><%= details.distance %> km</span>
             </div>
-            
+
             <div class="info-item">
                 <span class="info-label">Best Season</span>
                 <span class="info-value season-<%= details.bestSeason %>"><%= details.bestSeason.charAt(0).toUpperCase() + details.bestSeason.slice(1) %></span>
@@ -63,40 +63,25 @@
             <h2>Operating Schedule</h2>
             <div class="months-grid">
                 <% details.operatingMonths.forEach(function(month) { %>
-                <span class="month-badge"><%= month %></span>
+                <button
+                    type="button"
+                    class="month-badge"
+                    data-month="<%= month %>">
+                    <%= month %>
+                </button>
                 <% }); %>
             </div>
         </div>
 
-        <% if (details.schedules && details.schedules.length > 0) { %>
         <div class="route-schedules">
             <h2>Available Schedules</h2>
-            <div class="schedules-grid">
-                <% details.schedules.forEach(function(schedule) { %>
-                <div class="schedule-card">
-                    <div class="schedule-times">
-                        <div class="time-block">
-                            <span class="time-label">Departs</span>
-                            <span class="time-value"><%= schedule.departureTime %></span>
-                        </div>
-                        <span class="time-arrow">→</span>
-                        <div class="time-block">
-                            <span class="time-label">Arrives</span>
-                            <span class="time-value"><%= schedule.arrivalTime %></span>
-                        </div>
-                    </div>
-                    <div class="schedule-days">
-                        <% schedule.daysOfWeek.forEach(function(day) { %>
-                        <span class="day-badge"><%= day.substring(0, 3) %></span>
-                        <% }); %>
-                    </div>
-                    <a href="/trips/booking/<%= schedule.id %>" class="book-btn">Book Now</a>
-                </div>
-                <% }); %>
+
+            <div class="schedules-grid" id="schedules-grid">
+                <p>Loading schedules...</p>
             </div>
         </div>
-        <% } %>
     </div>
 </article>
 
+<script src="/js/trip-schedules.js" defer></script>
 <%- include('../partials/footer') %>
