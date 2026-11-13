@@ -6,6 +6,8 @@ import {
     getTicketClassesForDay
 } from '../controllers/ticket-classes.js';
 
+import { getAllStations, getStationById } from '../controllers/stations.js';
+
 const router = Router();
 
 
@@ -92,6 +94,7 @@ router.get('/trains', trainsApi);
  *   controller, which gets it from the model and the ticketClasses
  *   collection.
  */
+
 // Ticket Classes API
 router.get('/ticket-classes', (req, res) => {
     if (req.query.day !== undefined) {
@@ -100,5 +103,44 @@ router.get('/ticket-classes', (req, res) => {
 
     return getAllTicketClasses(req, res);
 });
+
+/**
+ * @openapi
+ * /api/stations:
+ *   get:
+ *     summary: Get all stations
+ *     tags:
+ *       - Stations
+ *     responses:
+ *       200:
+ *         description: A list of stations
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/stations', getAllStations);
+
+/**
+ * @openapi
+ * /api/stations/{id}:
+ *   get:
+ *     summary: Get one station by ID
+ *     tags:
+ *       - Stations
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The station ID
+ *     responses:
+ *       200:
+ *         description: Station returned successfully
+ *       404:
+ *         description: Station not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/stations/:id', getStationById);
 
 export default router;
