@@ -16,7 +16,8 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"lint": "eslint .",
-		"lint:fix": "eslint . --fix"
+		"lint:fix": "eslint . --fix",
+		"swagger": "node swagger.js"
 	},
 	"type": "module",
 	"version": "1.0.0",

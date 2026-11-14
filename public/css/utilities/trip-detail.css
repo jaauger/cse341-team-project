@@ -374,3 +374,36 @@ article.route-detail {
         }
     }
 }
+
+/* Station Information Popup */
+
+.station-info-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1001;
+
+    width: min(90%, 450px);
+    padding: 24px;
+
+    background-color: var(--clr-surface);
+    border: 1px solid var(--clr-border-light);
+    border-radius: 12px;
+
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+}
+
+/* Keep the popup hidden until JavaScript opens it */
+.station-info-popup[hidden] {
+    display: none;
+}
+
+/* Darkened background behind the station popup */
+body:has(.station-info-popup:not([hidden]))::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}

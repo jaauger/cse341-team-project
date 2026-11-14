@@ -51,12 +51,53 @@
                 <div class="station">
                     <span class="station-label">Start</span>
                     <span class="station-name"><%= details.startStation.charAt(0).toUpperCase() + details.startStation.slice(1) %></span>
+                    <button
+                        type="button"
+                        class="book-btn"
+                        data-station-id="<%= details.startStation %>">
+                        View Station Info
+                    </button>
                 </div>
                 <div class="station">
                     <span class="station-label">End</span>
                     <span class="station-name"><%= details.endStation.charAt(0).toUpperCase() + details.endStation.slice(1) %></span>
+                    <button
+                        type="button"
+                        class="book-btn"
+                        data-station-id="<%= details.endStation %>">
+                        View Station Info
+                    </button>
                 </div>
             </div>
+        </div>
+
+        <!-- Station Information Popup -->
+        <div id="station-info-popup" class="station-info-popup" hidden>
+            <h3 id="station-name-display"></h3>
+
+            <p>
+                <strong>Prefecture:</strong>
+                <span id="station-prefecture-display"></span>
+            </p>
+
+            <p>
+                <strong>Region:</strong>
+                <span id="station-region-display"></span>
+            </p>
+
+            <p>
+                <strong>Facilities:</strong>
+                <span id="station-facilities-display"></span>
+            </p>
+
+            <p id="station-description-display"></p>
+
+            <button
+                type="button"
+                id="close-station-popup"
+                class="book-btn">
+                Close
+            </button>
         </div>
 
         <div class="route-operating">
@@ -84,4 +125,7 @@
 </article>
 
 <script src="/js/trip-schedules.js" defer></script>
+<script src="/js/trip-stations.js" defer></script>
+
+
 <%- include('../partials/footer') %>

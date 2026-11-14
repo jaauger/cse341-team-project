@@ -1,0 +1,158 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Kizuna Rail API",
+    "version": "1.0.0",
+    "description": "API documentation for the Kizuna Rail project"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "Current server"
+    }
+  ],
+  "paths": {
+    "/trains": {
+      "get": {
+        "summary": "Get all trains",
+        "description": "Returns the available trains in the Kizuna Rail database.",
+        "tags": [
+          "Trains"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved train data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
+    "/ticket-classes": {
+      "get": {
+        "summary": "Get ticket classes",
+        "description": "Returns all ticket classes. When the optional day query parameter is included, returns only the ticket classes offered on that day.",
+        "tags": [
+          "Ticket Classes"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "day",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "A day name from monday to sunday. Upper or lower case is accepted. Leave empty to get all ticket classes."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved ticket classes. The list can be empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "class": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "pricePerKm": {
+                        "type": "number"
+                      },
+                      "amenities": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "daysOfWeek": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The day is not a valid day name."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
+    "/stations": {
+      "get": {
+        "summary": "Get all stations",
+        "tags": [
+          "Stations"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of stations"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/stations/{id}": {
+      "get": {
+        "summary": "Get one station by ID",
+        "tags": [
+          "Stations"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The station ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Station returned successfully"
+          },
+          "404": {
+            "description": "Station not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "components": {},
+  "tags": []
+}
