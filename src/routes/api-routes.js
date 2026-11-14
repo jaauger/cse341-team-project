@@ -106,7 +106,7 @@ router.get('/ticket-classes', (req, res) => {
 
 /**
  * @openapi
- * /api/stations:
+ * /stations:
  *   get:
  *     summary: Get all stations
  *     tags:
@@ -121,7 +121,7 @@ router.get('/stations', getAllStations);
 
 /**
  * @openapi
- * /api/stations/{id}:
+ * /stations/{id}:
  *   get:
  *     summary: Get one station by ID
  *     tags:
