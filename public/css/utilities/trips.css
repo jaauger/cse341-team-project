@@ -198,7 +198,8 @@
                 }
             }
         }
-        
+
+
         .route-description {
             grid-area: description;
             color: var(--clr-text-secondary);
@@ -301,4 +302,10 @@
             }
         }
     }
+}
+
+.routes-grid .route-card[hidden],
+.routes-grid .route-card .route-details .detail-item .season-badge[hidden],
+.routes-grid .route-card .highlights[hidden] {
+    display: none;
 }

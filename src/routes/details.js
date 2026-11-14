@@ -1,13 +1,15 @@
-import { getDb } from '../db/connect.js';
+// Deprecated, now being handled in controllers/trips.js
 
-export default async (req, res) => {
-    const { tripId } = req.params;
-    const db = getDb();
-    const details = await db.collection('trips').findOne({ id: tripId });
-    details.schedules = await db.collection('schedules').find({ tripId }).toArray();
+// import { getDb } from '../db/connect.js';
 
-    res.render('trips/details', {
-        title: 'Trip Details',
-        details
-    });
-};
+// export default async (req, res) => {
+//     const { tripId } = req.params;
+//     const db = getDb();
+//     const details = await db.collection('trips').findOne({ id: tripId });
+//     details.schedules = await db.collection('schedules').find({ tripId }).toArray();
+
+//     res.render('trips/details', {
+//         title: 'Trip Details',
+//         details
+//     });
+// };
