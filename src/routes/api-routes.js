@@ -6,6 +6,13 @@ import {
     getTicketClassesForDay
 } from '../controllers/ticket-classes.js';
 
+import {
+    getSchedulesForTrip,
+    getSchedulesForTripAndMonth
+} from '../controllers/schedules.js';
+
+import { getAllTrips, getTripById } from '../controllers/trips.js';
+
 import { getAllStations, getStationById } from '../controllers/stations.js';
 
 const router = Router();
@@ -94,7 +101,6 @@ router.get('/trains', trainsApi);
  *   controller, which gets it from the model and the ticketClasses
  *   collection.
  */
-
 // Ticket Classes API
 router.get('/ticket-classes', (req, res) => {
     if (req.query.day !== undefined) {
@@ -104,6 +110,105 @@ router.get('/ticket-classes', (req, res) => {
     return getAllTicketClasses(req, res);
 });
 
+
+
+/**
+ * @openapi
+ * /trips/{id}/schedules:
+ *   get:
+ *     summary: Get schedules for a trip
+ *     description: Returns schedules for a trip, optionally filtered by month.
+ *     tags:
+ *       - Schedules
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique trip ID.
+ *       - in: query
+ *         name: month
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 12
+ *         description: Optional month number used to filter schedules.
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved schedules. The array may be empty.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       '400':
+ *         description: Invalid month parameter.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/trips/:id/schedules', (req, res) => {
+    if (req.query.month !== undefined) {
+        return getSchedulesForTripAndMonth(req, res);
+    }
+
+    return getSchedulesForTrip(req, res);
+});
+
+
+/**
+ * @openapi
+ * /trips:
+ *   get:
+ *     summary: Get all trips
+ *     description: Returns the available trips in the Kizuna Rail database.
+ *     tags:
+ *       - Trips
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved trip data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/trips', getAllTrips);
+
+/**
+ * @openapi
+ * /trips/{id}:
+ *   get:
+ *     summary: Get a trip by ID
+ *     description: Returns a specific trip from the Kizuna Rail database.
+ *     tags:
+ *       - Trips
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved trip data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       '404':
+ *         description: Trip not found.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/trips/:id', getTripById);
+
+
 /**
  * @openapi
  * /stations:
@@ -112,9 +217,9 @@ router.get('/ticket-classes', (req, res) => {
  *     tags:
  *       - Stations
  *     responses:
- *       200:
+ *       '200':
  *         description: A list of stations
- *       500:
+ *       '500':
  *         description: Internal server error
  */
 router.get('/stations', getAllStations);
@@ -134,11 +239,11 @@ router.get('/stations', getAllStations);
  *           type: string
  *         description: The station ID
  *     responses:
- *       200:
+ *       '200':
  *         description: Station returned successfully
- *       404:
+ *       '404':
  *         description: Station not found
- *       500:
+ *       '500':
  *         description: Internal server error
  */
 router.get('/stations/:id', getStationById);

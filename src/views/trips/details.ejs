@@ -1,11 +1,11 @@
 <%- include('../partials/header') %>
 
-<article class="route-detail">
+<article class="route-detail" data-trip-id="<%= details.id %>">
     <div class="route-header">
         <div class="route-header-content">
             <h1 class="route-name"><%= details.name %></h1>
             <p class="route-description"><%= details.description %></p>
-            
+
             <% if (details.highlights && details.highlights.length > 0) { %>
             <div class="highlights">
                 <% details.highlights.forEach(function(highlight) { %>
@@ -14,7 +14,7 @@
             </div>
             <% } %>
         </div>
-        
+
         <% if (details.imageUrl) { %>
         <div class="route-image">
             <img src="<%= details.imageUrl %>" alt="<%= details.name %>">
@@ -28,17 +28,17 @@
                 <span class="info-label">Region</span>
                 <span class="info-value region-<%= details.region %>"><%= details.region.charAt(0).toUpperCase() + details.region.slice(1) %></span>
             </div>
-            
+
             <div class="info-item">
                 <span class="info-label">Duration</span>
                 <span class="info-value"><%= details.duration %></span>
             </div>
-            
+
             <div class="info-item">
                 <span class="info-label">Distance</span>
                 <span class="info-value"><%= details.distance %> km</span>
             </div>
-            
+
             <div class="info-item">
                 <span class="info-label">Best Season</span>
                 <span class="info-value season-<%= details.bestSeason %>"><%= details.bestSeason.charAt(0).toUpperCase() + details.bestSeason.slice(1) %></span>
@@ -51,94 +51,81 @@
                 <div class="station">
                     <span class="station-label">Start</span>
                     <span class="station-name"><%= details.startStation.charAt(0).toUpperCase() + details.startStation.slice(1) %></span>
-                    <!-- Feature 5: Station Info Button -->
-                    <button class="book-btn" style="padding: 5px 10px; margin-left: 10px; font-size: 0.9em;" onclick="fetchStationDetails('<%= details.startStation %>')">View Station Info</button>
+                    <button
+                        type="button"
+                        class="book-btn"
+                        data-station-id="<%= details.startStation %>">
+                        View Station Info
+                    </button>
                 </div>
                 <div class="station">
                     <span class="station-label">End</span>
                     <span class="station-name"><%= details.endStation.charAt(0).toUpperCase() + details.endStation.slice(1) %></span>
-                    <!-- Feature 5: Station Info Button -->
-                    <button class="book-btn" style="padding: 5px 10px; margin-left: 10px; font-size: 0.9em;" onclick="fetchStationDetails('<%= details.endStation %>')">View Station Info</button>
+                    <button
+                        type="button"
+                        class="book-btn"
+                        data-station-id="<%= details.endStation %>">
+                        View Station Info
+                    </button>
                 </div>
             </div>
-            
-            <!-- Feature 5: Station Info Popup -->
-            <div id="station-info-popup" style="display: none; border: 2px solid #2c3e50; padding: 15px; margin-top: 20px; border-radius: 8px; background-color: #f8f9fa;">
-                <h3 id="station-name-display" style="margin-top: 0; color: #2c3e50;"></h3>
-                <p><strong>Location:</strong> <span id="station-location-display"></span></p>
-                <p id="station-description-display"></p>
-                <button class="book-btn" onclick="document.getElementById('station-info-popup').style.display='none'">Close</button>
-            </div>
+        </div>
+
+        <!-- Station Information Popup -->
+        <div id="station-info-popup" class="station-info-popup" hidden>
+            <h3 id="station-name-display"></h3>
+
+            <p>
+                <strong>Prefecture:</strong>
+                <span id="station-prefecture-display"></span>
+            </p>
+
+            <p>
+                <strong>Region:</strong>
+                <span id="station-region-display"></span>
+            </p>
+
+            <p>
+                <strong>Facilities:</strong>
+                <span id="station-facilities-display"></span>
+            </p>
+
+            <p id="station-description-display"></p>
+
+            <button
+                type="button"
+                id="close-station-popup"
+                class="book-btn">
+                Close
+            </button>
         </div>
 
         <div class="route-operating">
             <h2>Operating Schedule</h2>
             <div class="months-grid">
                 <% details.operatingMonths.forEach(function(month) { %>
-                <span class="month-badge"><%= month %></span>
+                <button
+                    type="button"
+                    class="month-badge"
+                    data-month="<%= month %>">
+                    <%= month %>
+                </button>
                 <% }); %>
             </div>
         </div>
 
-        <% if (details.schedules && details.schedules.length > 0) { %>
         <div class="route-schedules">
             <h2>Available Schedules</h2>
-            <div class="schedules-grid">
-                <% details.schedules.forEach(function(schedule) { %>
-                <div class="schedule-card">
-                    <div class="schedule-times">
-                        <div class="time-block">
-                            <span class="time-label">Departs</span>
-                            <span class="time-value"><%= schedule.departureTime %></span>
-                        </div>
-                        <span class="time-arrow">→</span>
-                        <div class="time-block">
-                            <span class="time-label">Arrives</span>
-                            <span class="time-value"><%= schedule.arrivalTime %></span>
-                        </div>
-                    </div>
-                    <div class="schedule-days">
-                        <% schedule.daysOfWeek.forEach(function(day) { %>
-                        <span class="day-badge"><%= day.substring(0, 3) %></span>
-                        <% }); %>
-                    </div>
-                    <a href="/trips/booking/<%= schedule.id %>" class="book-btn">Book Now</a>
-                </div>
-                <% }); %>
+
+            <div class="schedules-grid" id="schedules-grid">
+                <p>Loading schedules...</p>
             </div>
         </div>
-        <% } %>
     </div>
 </article>
 
-<!-- Feature 5: Client-Side JS for Hydration -->
-<script>
-  async function fetchStationDetails(stationId) {
-    try {
-      // Call the API endpoint you created
-      const response = await fetch(`/api/stations/${stationId}`);
-      
-      // Handle non-200 responses safely
-      if (!response.ok) {
-        throw new Error('Unable to load station details.');
-      }
-      
-      // Parse the JSON data
-      const station = await response.json();
-      
-      // Hydrate the DOM elements with the fetched data
-      document.getElementById('station-name-display').textContent = station.name;
-      document.getElementById('station-location-display').textContent = station.location;
-      document.getElementById('station-description-display').textContent = station.description;
-      
-      // Make the popup container visible
-      document.getElementById('station-info-popup').style.display = 'block';
-      
-    } catch (error) {
-      console.error(error);
-      alert('Failed to load station information. Please ensure the API is running and the station exists.');
-    }
-  }
-</script>
+<script src="/js/trip-schedules.js" defer></script>
+<script src="/js/trip-stations.js" defer></script>
+
 
 <%- include('../partials/footer') %>
