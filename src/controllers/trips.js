@@ -1,8 +1,7 @@
-import { 
-    getAllTrips as findAllTrips, 
+import {
+    getAllTrips as findAllTrips,
     getTripById as findTripById
 } from "../models/trips.js";
-import { getDb } from '../db/connect.js';
 
 export async function getTripById(req, res) {
     try {
@@ -32,15 +31,18 @@ export async function getAllTrips(req, res) {
 }
 
 export async function getTripDetailsPage(req, res) {
-    const db = getDb();
     const { tripId } = req.params;
     const details = await findTripById(tripId);
 
-    // Fetch schedules for the trip that will be deleted in next feature to be replaced
-    details.schedules = await db.collection('schedules').find({ tripId }).toArray();
+    if (!details) {
+        return res.status(404).render('errors/404');
+    }
 
-    res.render('trips/details', { title: 'Trip Details', details });
-};
+    return res.render('trips/details', {
+        title: 'Trip Details',
+        details
+    });
+}
 
 export async function getTripsListPage(req, res) {
     res.render('trips/list', { title: 'Scenic Train Trips' });

@@ -14,6 +14,7 @@
         <section class="ticket-selection">
             <h2 class="section-title">Select Your Ticket</h2>
             
+            <p class="ticket-availability-message" id="ticket-availability-message" role="status" hidden></p>
             <div class="ticket-options">
                 <% if (ticketOptions) { %>
                     <% ticketOptions.forEach((ticket, index) => { %>
