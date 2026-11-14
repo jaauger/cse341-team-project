@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { homePage, aboutPage, testErrorPage } from './index.js';
 import { trainsPage } from './trains.js';
-import railTripsRouter from './trips.js';
+import tripsPageRouter from './trips.js';
 
 const router = Router();
 
@@ -16,7 +16,7 @@ router.get('/about', aboutPage);
 router.get('/trains', trainsPage);
 
 // Rail trips, bookings, and confirmations
-router.use('/trips', railTripsRouter);
+router.use('/trips', tripsPageRouter);
 
 // Test 500 error page
 router.get('/500', testErrorPage);

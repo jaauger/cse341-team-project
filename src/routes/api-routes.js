@@ -11,6 +11,8 @@ import {
     getSchedulesForTripAndMonth
 } from '../controllers/schedules.js';
 
+import { getAllTrips, getTripById } from '../controllers/trips.js';
+
 const router = Router();
 
 
@@ -152,5 +154,57 @@ router.get('/trips/:id/schedules', (req, res) => {
 
     return getSchedulesForTrip(req, res);
 });
+
+
+/**
+ * @openapi
+ * /trips:
+ *   get:
+ *     summary: Get all trips
+ *     description: Returns the available trips in the Kizuna Rail database.
+ *     tags:
+ *       - Trips
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved trip data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/trips', getAllTrips);
+
+/**
+ * @openapi
+ * /trips/{id}:
+ *   get:
+ *     summary: Get a trip by ID
+ *     description: Returns a specific trip from the Kizuna Rail database.
+ *     tags:
+ *       - Trips
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved trip data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       '404':
+ *         description: Trip not found.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/trips/:id', getTripById);
+
 
 export default router;
