@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { homePage, aboutPage, testErrorPage } from './index.js';
 import { trainsPage } from './trains.js';
 import tripsPageRouter from './trips.js';
+import { bookingsAdminPage } from '../controllers/bookings.js';
 
 const router = Router();
 
@@ -14,6 +15,20 @@ router.get('/about', aboutPage);
 
 // Trains page
 router.get('/trains', trainsPage);
+
+/*
+ * PLAIN ENGLISH: The web address for the new Bookings Admin page.
+ * LOGIC: When someone opens /bookings-admin, Express calls
+ *   bookingsAdminPage, which shows the src/views/bookings.ejs page.
+ * WHY WE NEED IT: The Bookings feature (issue #16) asks for an EJS route
+ *   that maps to /bookings-admin.
+ * LEARNING GAP: This route only opens the page. The list of bookings is
+ *   filled in afterward by JavaScript calling /api/bookings. This route is
+ *   not inside /trips because the assignment asks for /bookings-admin on
+ *   its own, next to pages like /trains.
+ */
+// Bookings Admin page
+router.get('/bookings-admin', bookingsAdminPage);
 
 // Rail trips, bookings, and confirmations
 router.use('/trips', tripsPageRouter);

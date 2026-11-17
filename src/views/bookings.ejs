@@ -1,0 +1,84 @@
+<%- include('./partials/header') %>
+
+<%#
+ * PLAIN ENGLISH: The Bookings Admin page. It lists every booking.
+ * LOGIC: This page opens EMPTY. It shows "Loading bookings..." first. Then
+ *   public/js/bookings-admin.js calls /api/bookings, copies the hidden
+ *   template once per booking, fills it in, and shows the list.
+ * WHY WE NEED IT: The Bookings feature (issue #16) asks for an admin page at
+ *   /bookings-admin that is filled in by JavaScript, not by an EJS loop.
+ * LEARNING GAP: There is no forEach loop over bookings in this file. That is
+ *   on purpose. It follows the trains page (src/views/trains.ejs).
+ *   These notes are EJS comments, so they never show up in the browser.
+ *   An EJS comment cannot contain the EJS closing tag as plain text,
+ *   because EJS would think the comment ends there.
+ * DATA COMES FROM: Nothing here. The data comes later from /api/bookings.
+%>
+
+<section class="bookings-hero">
+    <h1>Bookings Admin</h1>
+    <p>
+        See every trip booked on Kizuna Rail, with the newest bookings first.
+    </p>
+</section>
+
+<section class="bookings-catalog">
+    <%#
+     * PLAIN ENGLISH: The three messages the page can show.
+     * LOGIC: "Loading" shows first. The error and "no bookings" messages
+     *   start hidden. The JavaScript shows the right one.
+     * LEARNING GAP: role="alert" makes screen readers read the error out
+     *   loud. aria-live="polite" reads the other messages when they change.
+    %>
+    <div class="bookings-state" id="bookings-loading" aria-live="polite">Loading bookings...</div>
+    <div class="bookings-state bookings-error" id="bookings-error" role="alert" hidden></div>
+    <div class="bookings-state" id="bookings-empty" aria-live="polite" hidden>No bookings yet.</div>
+
+    <div class="bookings-grid" id="bookings-list"></div>
+
+    <%#
+     * PLAIN ENGLISH: The hidden pattern for one booking card.
+     * LOGIC: The browser does not show a template. The JavaScript copies it
+     *   once for each booking and fills in each data-field spot.
+     * LEARNING GAP: The top of each card is a div, not a header tag. The
+     *   site already styles every header tag as the green page banner, so a
+     *   header tag here made the booked date hard to read on a green bar.
+     *   The passenger list starts empty because a booking can have one
+     *   person or many. The JavaScript adds one line per passenger.
+    %>
+    <template id="booking-card-template">
+        <article class="booking-card">
+            <div class="booking-card-header">
+                <h2 data-field="code"></h2>
+                <span class="booking-date" data-field="created"></span>
+            </div>
+
+            <dl class="booking-specs">
+                <div class="spec-item">
+                    <dt>Trip</dt>
+                    <dd data-field="trip"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Schedule</dt>
+                    <dd data-field="schedule"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Travel Day</dt>
+                    <dd data-field="day"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Ticket Class</dt>
+                    <dd data-field="ticket-class"></dd>
+                </div>
+            </dl>
+
+            <div class="booking-passengers">
+                <h3>Passengers (<span data-field="passenger-count"></span>)</h3>
+                <ul data-field="passengers"></ul>
+            </div>
+        </article>
+    </template>
+</section>
+
+<script src="/js/bookings-admin.js" defer></script>
+<%- include('./partials/footer') %>

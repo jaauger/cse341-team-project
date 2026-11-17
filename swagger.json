@@ -106,6 +106,122 @@
         }
       }
     },
+    "/trips/{id}/schedules": {
+      "get": {
+        "summary": "Get schedules for a trip",
+        "description": "Returns schedules for a trip, optionally filtered by month.",
+        "tags": [
+          "Schedules"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique trip ID."
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "description": "Optional month number used to filter schedules."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved schedules. The array may be empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid month parameter."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
+    "/trips": {
+      "get": {
+        "summary": "Get all trips",
+        "description": "Returns the available trips in the Kizuna Rail database.",
+        "tags": [
+          "Trips"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved trip data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
+    "/trips/{id}": {
+      "get": {
+        "summary": "Get a trip by ID",
+        "description": "Returns a specific trip from the Kizuna Rail database.",
+        "tags": [
+          "Trips"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved trip data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Trip not found."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
     "/stations": {
       "get": {
         "summary": "Get all stations",
@@ -148,6 +264,79 @@
           },
           "500": {
             "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/bookings": {
+      "get": {
+        "summary": "Get all bookings",
+        "description": "Returns every booking in the Kizuna Rail database, newest first. The Bookings Admin page uses this to fill in its list.",
+        "tags": [
+          "Bookings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved bookings. The list can be empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "The confirmation code."
+                      },
+                      "scheduleId": {
+                        "type": "number"
+                      },
+                      "tripId": {
+                        "type": "string"
+                      },
+                      "ticketClass": {
+                        "type": "string"
+                      },
+                      "selectedDay": {
+                        "type": "string"
+                      },
+                      "passengers": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "firstName": {
+                              "type": "string"
+                            },
+                            "lastName": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "phone": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error."
           }
         }
       }

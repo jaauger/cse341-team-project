@@ -23,9 +23,22 @@ const initializeDatabase = async (db) => {
     await collection.insertMany(documents);
   }
 
-  const confirmations = db.collection('confirmations');
-  await confirmations.deleteMany({});
-  await confirmations.createIndex({ id: 1 }, { unique: true });
+  /*
+   * PLAIN ENGLISH: Empty the bookings collection and make sure no two
+   *   bookings can share the same confirmation code.
+   * LOGIC: deleteMany({}) removes every booking. createIndex({ id: 1 },
+   *   { unique: true }) tells MongoDB to reject a booking whose id is
+   *   already used.
+   * WHY WE NEED IT: The Bookings feature (issue #16) renamed the
+   *   "confirmations" collection to "bookings." This reset now clears the
+   *   new place where bookings are saved.
+   * LEARNING GAP: Bookings are not in starterCollections above because
+   *   there is no bookings seed file. Bookings always start empty and are
+   *   only created when someone books a trip.
+   */
+  const bookings = db.collection('bookings');
+  await bookings.deleteMany({});
+  await bookings.createIndex({ id: 1 }, { unique: true });
 };
 
 export { initializeDatabase, starterCollections };

@@ -15,6 +15,8 @@ import { getAllTrips, getTripById } from '../controllers/trips.js';
 
 import { getAllStations, getStationById } from '../controllers/stations.js';
 
+import { getAllBookings } from '../controllers/bookings.js';
+
 const router = Router();
 
 
@@ -247,5 +249,72 @@ router.get('/stations', getAllStations);
  *         description: Internal server error
  */
 router.get('/stations/:id', getStationById);
+
+/**
+ * @openapi
+ * /bookings:
+ *   get:
+ *     summary: Get all bookings
+ *     description: Returns every booking in the Kizuna Rail database, newest first. The Bookings Admin page uses this to fill in its list.
+ *     tags:
+ *       - Bookings
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved bookings. The list can be empty.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     description: The confirmation code.
+ *                   scheduleId:
+ *                     type: number
+ *                   tripId:
+ *                     type: string
+ *                   ticketClass:
+ *                     type: string
+ *                   selectedDay:
+ *                     type: string
+ *                   passengers:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         firstName:
+ *                           type: string
+ *                         lastName:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *       '500':
+ *         description: Internal server error.
+ */
+/*
+ * PLAIN ENGLISH: This is the address the Bookings Admin page calls to get
+ *   the list of all bookings.
+ * LOGIC: When a GET request arrives at /bookings, it is passed straight to
+ *   the getAllBookings controller function, which sends back the list.
+ * WHY WE NEED IT: The Bookings feature (issue #16) asks for /api/bookings
+ *   with Swagger documentation.
+ * LEARNING GAP: This file only writes '/bookings'. The '/api' in front is
+ *   added by src/routes/router.js. The Swagger notes above are what make
+ *   this route show up at /api-docs.
+ * DATA COMES FROM: getAllBookings in src/controllers/bookings.js, which gets
+ *   the list from the model and the "bookings" collection.
+ */
+// Bookings API
+router.get('/bookings', getAllBookings);
 
 export default router;
