@@ -36,9 +36,21 @@ const initializeDatabase = async (db) => {
    *   there is no bookings seed file. Bookings always start empty and are
    *   only created when someone books a trip.
    */
+
   const bookings = db.collection('bookings');
   await bookings.deleteMany({});
   await bookings.createIndex({ id: 1 }, { unique: true });
-};
 
+
+// Initialize standard authentication roles without deleting existing roles.
+const roles = db.collection('roles');
+
+for (const roleName of ['customer', 'admin']) {
+    await roles.updateOne(
+        { name: roleName },
+        { $setOnInsert: { name: roleName } },
+        { upsert: true }
+    );
+}
+};
 export { initializeDatabase, starterCollections };

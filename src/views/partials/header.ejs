@@ -6,6 +6,7 @@
     <title><%= title %></title>
     <link rel="stylesheet" href="/css/main.css">
     <script src="/js/main.js"></script>
+    <script src="/js/logout.js" defer></script>
     <% if (NODE_ENV.includes('dev')) { %>
         <script>
             // Get the current hostname and port from the browser
@@ -38,6 +39,15 @@
                     <li><a href="/trips">Trips</a></li>
                     <li><a href="/trains">Trains</a></li>
                     <li><a href="/about">About</a></li>
+                    <% if (user) { %>
+                        <li>
+                            <button type="button" id="logout-button">
+                                Logout
+                            </button>
+                        </li>
+                    <% } else { %>
+                        <li><a href="/login">Login</a></li>
+                    <% } %>
                     <li><a href="/404">404</a></li>
                     <li><a href="/500">500</a></li>
                 </ul>

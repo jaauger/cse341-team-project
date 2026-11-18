@@ -4,6 +4,7 @@ import { homePage, aboutPage, testErrorPage } from './index.js';
 import { trainsPage } from './trains.js';
 import tripsPageRouter from './trips.js';
 import { bookingsAdminPage } from '../controllers/bookings.js';
+import { requirePageRole } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -12,6 +13,20 @@ router.get('/', homePage);
 
 // About page
 router.get('/about', aboutPage);
+
+// Login page
+router.get('/login', (req, res) => {
+    res.render('login', {
+        title: 'Login | Kizuna Rail'
+    });
+});
+
+// Registration page
+router.get('/register', (req, res) => {
+    res.render('register', {
+        title: 'Register | Kizuna Rail'
+    });
+});
 
 // Trains page
 router.get('/trains', trainsPage);
@@ -28,7 +43,7 @@ router.get('/trains', trainsPage);
  *   its own, next to pages like /trains.
  */
 // Bookings Admin page
-router.get('/bookings-admin', bookingsAdminPage);
+router.get('/bookings-admin', requirePageRole('admin'), bookingsAdminPage);
 
 // Rail trips, bookings, and confirmations
 router.use('/trips', tripsPageRouter);
