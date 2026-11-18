@@ -1,4 +1,15 @@
-import { bookingPage, processBookingRequest } from './book.js';
+/*
+ * PLAIN ENGLISH: Bring in the two booking page functions from their new home.
+ * LOGIC: bookingPage and processBookingRequest now live in
+ *   src/controllers/bookings.js instead of src/routes/book.js.
+ * WHY WE NEED IT: The Bookings feature (issue #16) asks us to move these two
+ *   functions into the bookings controller so routes only connect web
+ *   addresses to controller functions.
+ * LEARNING GAP: The web addresses below did NOT change. Only the file the
+ *   functions come from changed, so the booking form and the thank-you page
+ *   work exactly as before.
+ */
+import { bookingPage, processBookingRequest } from '../controllers/bookings.js';
 import confirmationPage from './confirm.js';
 import { getTripDetailsPage, getTripsListPage } from '../controllers/trips.js';
 import { Router } from 'express';

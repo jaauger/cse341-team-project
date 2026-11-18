@@ -5,6 +5,14 @@
 @import 'base/base.css' layer(base);
 
 @import 'utilities/booking.css' layer(utilities);
+/*
+ * PLAIN ENGLISH: Load the styles for the new Bookings Admin page.
+ * WHY WE NEED IT: Without this line, the browser never reads
+ *   bookings-admin.css, and the admin page would have no styles.
+ * LEARNING GAP: It goes in the utilities layer, in A to Z order,
+ *   the same as every other page's styles (issue #16).
+ */
+@import 'utilities/bookings-admin.css' layer(utilities);
 @import 'utilities/confirmation.css' layer(utilities);
 @import 'utilities/home.css' layer(utilities);
 @import 'utilities/trains.css' layer(utilities);
