@@ -28,4 +28,15 @@ const initializeDatabase = async (db) => {
   await confirmations.createIndex({ id: 1 }, { unique: true });
 };
 
+// Initialize standard authentication roles without deleting existing roles.
+const roles = db.collection('roles');
+
+for (const roleName of ['customer', 'admin']) {
+    await roles.updateOne(
+        { name: roleName },
+        { $setOnInsert: { name: roleName } },
+        { upsert: true }
+    );
+}
+
 export { initializeDatabase, starterCollections };
