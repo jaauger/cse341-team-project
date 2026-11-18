@@ -1,0 +1,147 @@
+/*
+ * PLAIN ENGLISH: Styles for the Bookings Admin page (/bookings-admin).
+ * LOGIC: The layout copies the trains page (public/css/utilities/trains.css):
+ *   the same spacing, rounded corners, and card grid. The colors use the
+ *   site's green color settings from public/css/base/colors.css, so the
+ *   page matches the rest of Kizuna Rail and the booking page.
+ * WHY WE NEED IT: The Bookings feature (issue #16) adds a new page, and it
+ *   should look like it belongs on Kizuna Rail.
+ * LEARNING GAP: var(--clr-...), var(--space-...), and var(--radius-...) are
+ *   the site's shared design settings. Using them means that if the team
+ *   changes a site color later, this page changes with it.
+ *   The rules are nested inside .bookings-catalog so they only affect this
+ *   page and can never change another page by accident.
+ */
+.bookings-hero {
+    padding: var(--space-2xl) var(--space-lg);
+    border-radius: var(--radius-lg);
+    background-color: var(--clr-primary-pale);
+    border: 1px solid var(--clr-primary-light);
+
+    h1 {
+        margin: 0 0 var(--space-sm) 0;
+        color: var(--clr-text-primary);
+        font-size: var(--font-size-3xl);
+    }
+
+    p {
+        margin: 0;
+        max-width: 70ch;
+        color: var(--clr-text-secondary);
+    }
+}
+
+.bookings-catalog {
+    display: block;
+
+    /* The loading, error, and "No bookings yet." messages */
+    .bookings-state {
+        margin-bottom: var(--space-md);
+        color: var(--clr-text-secondary);
+    }
+
+    .bookings-error {
+        color: #8f1f1f;
+    }
+
+    /* One card per row on phones. Two per row on wider screens (see bottom). */
+    .bookings-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+    }
+
+    .booking-card {
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--clr-border);
+        background-color: var(--clr-surface);
+        box-shadow: var(--shadow-sm);
+        padding: var(--space-lg);
+
+        /* The confirmation code and the booked date */
+        .booking-card-header {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-xs);
+            margin-bottom: var(--space-sm);
+
+            h2 {
+                margin: 0;
+                font-size: var(--font-size-xl);
+                color: var(--clr-text-primary);
+                letter-spacing: 0.04em;
+            }
+
+            /*
+             * LEARNING GAP: This uses the darker summer green, not
+             * --clr-primary. The lighter green is fine for borders and
+             * buttons, but as small text on white it is too faint to read.
+             */
+            .booking-date {
+                color: var(--clr-summer-text);
+                letter-spacing: 0.02em;
+            }
+        }
+
+        /*
+         * Trip, Schedule, Travel Day, and Ticket Class boxes (2 per row).
+         * LEARNING GAP: These use the same pale green and border as the top
+         * box (.bookings-hero), so the details stand out on the white card
+         * and the whole page uses one matching green.
+         */
+        .booking-specs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-sm);
+            margin: 0 0 var(--space-md) 0;
+
+            .spec-item {
+                margin: 0;
+                padding: var(--space-sm);
+                border-radius: var(--radius-sm);
+                background-color: var(--clr-primary-pale);
+                border: 1px solid var(--clr-primary-light);
+
+                dt {
+                    color: var(--clr-text-secondary);
+                    font-size: var(--font-size-sm);
+                }
+
+                dd {
+                    margin: var(--space-xs) 0 0 0;
+                    color: var(--clr-text-primary);
+                }
+            }
+        }
+
+        /* The list of people on the booking */
+        .booking-passengers {
+            border-top: 1px solid var(--clr-border);
+            padding-top: var(--space-sm);
+
+            h3 {
+                margin: 0 0 var(--space-xs) 0;
+                font-size: var(--font-size-sm);
+                color: var(--clr-text-secondary);
+            }
+
+            ul {
+                margin: 0;
+                padding-left: var(--space-lg);
+                color: var(--clr-text-primary);
+            }
+
+            li + li {
+                margin-top: var(--space-xs);
+            }
+        }
+    }
+}
+
+@media (min-width: 768px) {
+    .bookings-catalog {
+        .bookings-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+}
