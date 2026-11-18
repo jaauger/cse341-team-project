@@ -17,6 +17,8 @@ import { getAllStations, getStationById } from '../controllers/stations.js';
 
 import { getAllBookings } from '../controllers/bookings.js';
 
+import { requireApiRole } from '../middleware/auth.js';
+
 const router = Router();
 
 
@@ -315,6 +317,6 @@ router.get('/stations/:id', getStationById);
  *   the list from the model and the "bookings" collection.
  */
 // Bookings API
-router.get('/bookings', getAllBookings);
+router.get('/bookings', requireApiRole('admin'), getAllBookings);
 
 export default router;
