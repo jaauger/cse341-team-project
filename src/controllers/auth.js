@@ -111,13 +111,14 @@ const login = async (req, res) => {
         }
 
         // Regenerate the session after successful authentication.
-        req.session.regenerate((error) => {
+        return req.session.regenerate((error) => {
             if (error) {
                 console.error('Session regeneration failed:', error);
 
                 return res.status(500).json({
                     message: 'Unable to complete login.'
                 });
+
             }
 
             // Store only the information needed for authentication.
@@ -127,7 +128,7 @@ const login = async (req, res) => {
                 role: user.role.name
             };
 
-            req.session.save((saveError) => {
+            return req.session.save((saveError) => {
                 if (saveError) {
                     console.error('Session save failed:', saveError);
 

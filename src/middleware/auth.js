@@ -15,7 +15,7 @@ const requireApiLogin = (req, res, next) => {
         });
     }
 
-    next();
+    return next();
 };
 
 const requirePageLogin = (req, res, next) => {
@@ -23,7 +23,7 @@ const requirePageLogin = (req, res, next) => {
         return res.redirect('/login');
     }
 
-    next();
+    return next();
 };
 
 const requireApiRole = (role) => {
@@ -42,7 +42,7 @@ const requireApiRole = (role) => {
             });
         }
 
-        next();
+        return next();
     };
 };
 
@@ -51,6 +51,7 @@ const requirePageRole = (role) => {
         // Unauthenticated visitors must log in first.
         if (!req.user) {
             return res.redirect('/login');
+
         }
 
         // Authenticated users without permission receive HTTP 403.
@@ -58,9 +59,10 @@ const requirePageRole = (role) => {
             const error = new Error('Access denied. Insufficient permissions.');
             error.status = 403;
             return next(error);
+
         }
 
-        next();
+        return next();
     };
 };
 
