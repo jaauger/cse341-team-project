@@ -1,14 +1,21 @@
 <%- include('./partials/header') %>
 
 <%#
- * PLAIN ENGLISH: The Bookings Admin page. It lists every booking.
+ * PLAIN ENGLISH: The Bookings Admin page. Admins see every booking. Everyone
+ *   else who is logged in sees only the bookings where they are a passenger.
+ *   Each booking can be edited or deleted from here.
  * LOGIC: This page opens EMPTY. It shows "Loading bookings..." first. Then
  *   public/js/bookings-admin.js calls /api/bookings, copies the hidden
- *   template once per booking, fills it in, and shows the list.
- * WHY WE NEED IT: The Bookings feature (issue #16) asks for an admin page at
- *   /bookings-admin that is filled in by JavaScript, not by an EJS loop.
+ *   template once per booking, fills it in, and shows the list. The Edit and
+ *   Delete buttons call PUT and DELETE /api/bookings/:id.
+ * WHY WE NEED IT: The Bookings feature (issue #16) created this page.
+ *   Feature Set 4 (issue #19) adds login protection, the right list for each
+ *   user, and the ability to update and delete bookings.
  * LEARNING GAP: There is no forEach loop over bookings in this file. That is
  *   on purpose. It follows the trains page (src/views/trains.ejs).
+ *   Who may open this page is decided by the route lock in
+ *   src/routes/ejs-routes.js. Which bookings appear is decided by the
+ *   server, not by this page.
  *   These notes are EJS comments, so they never show up in the browser.
  *   An EJS comment cannot contain the EJS closing tag as plain text,
  *   because EJS would think the comment ends there.
@@ -18,21 +25,25 @@
 <section class="bookings-hero">
     <h1>Bookings Admin</h1>
     <p>
-        See every trip booked on Kizuna Rail, with the newest bookings first.
+        Admins see every booking. Everyone else sees the bookings where they
+        are a passenger. Newest bookings are first.
     </p>
 </section>
 
 <section class="bookings-catalog">
     <%#
-     * PLAIN ENGLISH: The three messages the page can show.
-     * LOGIC: "Loading" shows first. The error and "no bookings" messages
-     *   start hidden. The JavaScript shows the right one.
+     * PLAIN ENGLISH: The messages the page can show.
+     * LOGIC: "Loading" shows first. The error, "no bookings," and action
+     *   messages start hidden. The JavaScript shows the right one.
      * LEARNING GAP: role="alert" makes screen readers read the error out
      *   loud. aria-live="polite" reads the other messages when they change.
+     *   bookings-message is new for Feature Set 4. It says things like
+     *   "Booking KR-AB12CD was deleted" after an edit or delete.
     %>
     <div class="bookings-state" id="bookings-loading" aria-live="polite">Loading bookings...</div>
     <div class="bookings-state bookings-error" id="bookings-error" role="alert" hidden></div>
     <div class="bookings-state" id="bookings-empty" aria-live="polite" hidden>No bookings yet.</div>
+    <div class="bookings-state" id="bookings-message" aria-live="polite" hidden></div>
 
     <div class="bookings-grid" id="bookings-list"></div>
 
@@ -76,6 +87,64 @@
                 <h3>Passengers (<span data-field="passenger-count"></span>)</h3>
                 <ul data-field="passengers"></ul>
             </div>
+
+            <%#
+             * PLAIN ENGLISH: The Edit and Delete buttons for this booking.
+             * LOGIC: data-action tells the JavaScript which button was
+             *   clicked. type="button" stops the button from submitting a
+             *   form by accident.
+             * WHY WE NEED IT: Feature Set 4 asks for the ability to update
+             *   and delete bookings from this page.
+             * LEARNING GAP: Showing these buttons is not the security. The
+             *   server checks every PUT and DELETE and sends 403 if the
+             *   user is not a passenger and not an admin.
+            %>
+            <div class="booking-actions" data-field="actions">
+                <button type="button" class="booking-button" data-action="edit">Edit</button>
+                <button type="button" class="booking-button booking-button-delete" data-action="delete">Delete</button>
+            </div>
+
+            <%#
+             * PLAIN ENGLISH: The edit form for this booking. It stays hidden
+             *   until the Edit button is clicked.
+             * LOGIC: The ticket class choices come from /api/ticket-classes.
+             *   The days are written here. The passenger boxes are added by
+             *   the JavaScript, one group per passenger.
+             * LEARNING GAP: "required" makes the browser ask for missing
+             *   names before sending. The server still checks too, because
+             *   anyone could send a request without using this form.
+            %>
+            <form class="booking-edit-form" data-field="edit-form" hidden>
+                <label>
+                    Ticket Class
+                    <select name="ticketClass" data-field="edit-ticket-class" required></select>
+                </label>
+
+                <label>
+                    Travel Day
+                    <select name="selectedDay" data-field="edit-day" required>
+                        <option value="monday">Monday</option>
+                        <option value="tuesday">Tuesday</option>
+                        <option value="wednesday">Wednesday</option>
+                        <option value="thursday">Thursday</option>
+                        <option value="friday">Friday</option>
+                        <option value="saturday">Saturday</option>
+                        <option value="sunday">Sunday</option>
+                    </select>
+                </label>
+
+                <fieldset class="booking-edit-passengers">
+                    <legend>Passengers</legend>
+                    <div data-field="edit-passengers"></div>
+                </fieldset>
+
+                <p class="booking-edit-error" data-field="edit-error" role="alert" hidden></p>
+
+                <div class="booking-actions">
+                    <button type="submit" class="booking-button">Save</button>
+                    <button type="button" class="booking-button" data-action="cancel">Cancel</button>
+                </div>
+            </form>
         </article>
     </template>
 </section>
