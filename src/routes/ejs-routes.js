@@ -4,7 +4,7 @@ import { homePage, aboutPage, testErrorPage } from './index.js';
 import { trainsPage } from './trains.js';
 import tripsPageRouter from './trips.js';
 import { bookingsAdminPage } from '../controllers/bookings.js';
-import { requirePageRole } from '../middleware/auth.js';
+import { requirePageRole, requirePageLogin } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -25,6 +25,13 @@ router.get('/login', (req, res) => {
 router.get('/register', (req, res) => {
     res.render('register', {
         title: 'Register | Kizuna Rail'
+    });
+});
+
+// User dashboard
+router.get('/dashboard', requirePageLogin, (req, res) => {
+    res.render('dashboard', {
+        title: 'Dashboard | Kizuna Rail'
     });
 });
 
