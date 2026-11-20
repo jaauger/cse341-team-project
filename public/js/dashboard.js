@@ -3,7 +3,7 @@ const bookingsStatus = document.getElementById('bookings-status');
 const bookingsList = document.getElementById('bookings-list');
 
 function displayBooking(booking) {
-    const card = document.createElement('p');
+    const card = document.createElement('li');
 
     const passengerCount = booking.passengers.length;
 
