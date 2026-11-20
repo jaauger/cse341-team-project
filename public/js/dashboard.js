@@ -5,9 +5,11 @@ const bookingsList = document.getElementById('bookings-list');
 function displayBooking(booking) {
     const card = document.createElement('p');
 
-    card.textContent =
-        `Booking: ${booking.id} | Day: ${booking.selectedDay} | Ticket: ${booking.ticketClass}`;
+    const passengerCount = booking.passengers.length;
 
+    card.textContent =
+    `Booking: ${booking.id} | Day: ${booking.selectedDay} | Ticket: ${booking.ticketClass} | Passengers: ${passengerCount}`;
+    
     bookingsList.appendChild(card);
 }
 
