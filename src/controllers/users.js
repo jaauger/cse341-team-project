@@ -104,4 +104,11 @@ const deleteUser = async (req, res) => {
     }
 };
 
-export { getUsers, updateUserRole, deleteUser };
+const getUsersPage = (req, res) => {
+    return res.render('admin', {
+        title: 'User Management',
+        isAdmin: req.user.role === 'admin'
+    });
+};
+
+export { getUsers, updateUserRole, deleteUser, getUsersPage };

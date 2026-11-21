@@ -4,7 +4,8 @@ import { homePage, aboutPage, testErrorPage } from './index.js';
 import { trainsPage } from './trains.js';
 import tripsPageRouter from './trips.js';
 import { bookingsAdminPage } from '../controllers/bookings.js';
-import { requirePageRole } from '../middleware/auth.js';
+import { getUsersPage } from '../controllers/users.js';
+import { requirePageLogin, requirePageRole } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -44,6 +45,9 @@ router.get('/trains', trainsPage);
  */
 // Bookings Admin page
 router.get('/bookings-admin', requirePageRole('admin'), bookingsAdminPage);
+
+// User Management page
+router.get('/admin', requirePageLogin, getUsersPage);
 
 // Rail trips, bookings, and confirmations
 router.use('/trips', tripsPageRouter);
