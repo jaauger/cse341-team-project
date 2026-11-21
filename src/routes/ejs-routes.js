@@ -28,6 +28,13 @@ router.get('/register', (req, res) => {
     });
 });
 
+// Admin Dashboard - admin access only
+router.get('/admin', requirePageRole('admin'), (req, res) => {
+    res.render('admin-dashboard', {
+        title: 'Admin Dashboard | Kizuna Rail'
+    });
+});
+
 // Trains page
 router.get('/trains', trainsPage);
 
