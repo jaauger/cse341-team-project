@@ -16,8 +16,9 @@ import { getAllTrips, getTripById } from '../controllers/trips.js';
 import { getAllStations, getStationById } from '../controllers/stations.js';
 
 import { getAllBookings } from '../controllers/bookings.js';
+import { getUsers, updateUserRole, deleteUser } from '../controllers/users.js';
 
-import { requireApiRole } from '../middleware/auth.js';
+import { requireApiLogin, requireApiRole } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -318,5 +319,142 @@ router.get('/stations/:id', getStationById);
  */
 // Bookings API
 router.get('/bookings', requireApiRole('admin'), getAllBookings);
+
+/**
+ * @openapi
+ * /users:
+ *   get:
+ *     summary: Get the authenticated user's account or all users
+ *     description: Administrators receive all users. Normal users receive only their own account.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved user data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   displayName:
+ *                     type: string
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   role:
+ *                     type: string
+ *                     enum:
+ *                       - customer
+ *                       - admin
+ *       '401':
+ *         description: Authentication is required.
+ *       '500':
+ *         description: Internal server error.
+ */
+// Users API
+router.get('/users', requireApiLogin, getUsers);
+
+/**
+ * @openapi
+ * /users/{id}:
+ *   put:
+ *     summary: Update a user's role
+ *     description: Allows an authenticated administrator to change only a user's role.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique user ID.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum:
+ *                   - customer
+ *                   - admin
+ *     responses:
+ *       '200':
+ *         description: User role updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 displayName:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 role:
+ *                   type: string
+ *                   enum:
+ *                     - customer
+ *                     - admin
+ *       '400':
+ *         description: The role is missing or invalid.
+ *       '401':
+ *         description: Authentication is required.
+ *       '403':
+ *         description: Administrator authorization is required.
+ *       '404':
+ *         description: The user was not found.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.put('/users/:id', requireApiRole('admin'), updateUserRole);
+
+/**
+ * @openapi
+ * /users/{id}:
+ *   delete:
+ *     summary: Delete a user
+ *     description: Allows an authenticated administrator to delete a user.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique user ID.
+ *     responses:
+ *       '204':
+ *         description: User deleted successfully.
+ *       '401':
+ *         description: Authentication is required.
+ *       '403':
+ *         description: Administrator authorization is required.
+ *       '404':
+ *         description: The user was not found.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.delete('/users/:id', requireApiRole('admin'), deleteUser);
 
 export default router;
