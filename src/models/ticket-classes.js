@@ -50,3 +50,15 @@ export async function getAllTicketClasses() {
 export async function getTicketClassesForDay(day) {
   return ticketClass.find({ daysOfWeek: day }).lean();
 }
+
+export async function getTicketClassesForTwoDays(day1, day2) {
+  const [firstDayClasses, secondDayClasses] = await Promise.all([
+    getTicketClassesForDay(day1),
+    getTicketClassesForDay(day2),
+  ]);
+
+  return {
+    day1: { day: day1, ticketClasses: firstDayClasses },
+    day2: { day: day2, ticketClasses: secondDayClasses },
+  };
+}

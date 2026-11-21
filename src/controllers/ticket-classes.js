@@ -3,6 +3,7 @@ import {
   DAYS_OF_WEEK,
   getAllTicketClasses as findAllTicketClasses,
   getTicketClassesForDay as findTicketClassesForDay,
+  getTicketClassesForTwoDays as findTicketClassesForTwoDays,
 } from "../models/ticket-classes.js";
 
 /*
@@ -76,6 +77,29 @@ export async function getTicketClassesForDay(req, res) {
 
     return res.status(500).json({
       error: "Failed to fetch ticket classes",
+    });
+  }
+}
+
+export async function getTicketClassesComparison(req, res) {
+  try {
+    const day1 = String(req.query.day1 ?? "").trim().toLowerCase();
+    const day2 = String(req.query.day2 ?? "").trim().toLowerCase();
+
+    if (!DAYS_OF_WEEK.includes(day1) || !DAYS_OF_WEEK.includes(day2)) {
+      return res.status(400).json({
+        error: "Invalid days. Use day names from monday to sunday.",
+      });
+    }
+
+    const comparison = await findTicketClassesForTwoDays(day1, day2);
+
+    return res.status(200).json(comparison);
+  } catch (error) {
+    console.error("Error comparing ticket classes:", error);
+
+    return res.status(500).json({
+      error: "Failed to compare ticket classes",
     });
   }
 }

@@ -1,5 +1,4 @@
 import { Router } from 'express';
-
 import { homePage, aboutPage, testErrorPage } from './index.js';
 import { trainsPage } from './trains.js';
 import tripsPageRouter from './trips.js';
@@ -31,6 +30,12 @@ router.get('/register', (req, res) => {
 // Trains page
 router.get('/trains', trainsPage);
 
+// Ticket Class Comparison practice page
+router.get('/ticket-class-comparison', (req, res) => {
+    res.render('ticket-class-comparison', {
+        title: 'Compare Ticket Classes | Kizuna Rail'
+    });
+});
 /*
  * PLAIN ENGLISH: The web address for the new Bookings Admin page.
  * LOGIC: When someone opens /bookings-admin, Express calls

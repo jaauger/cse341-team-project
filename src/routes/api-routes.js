@@ -3,7 +3,8 @@ import { Router } from 'express';
 import { trainsApi } from './trains.js';
 import {
     getAllTicketClasses,
-    getTicketClassesForDay
+    getTicketClassesForDay,
+    getTicketClassesComparison
 } from '../controllers/ticket-classes.js';
 
 import {
@@ -113,6 +114,34 @@ router.get('/ticket-classes', (req, res) => {
 
     return getAllTicketClasses(req, res);
 });
+
+/**
+ * @openapi
+ * /ticket-classes/compare:
+ *   get:
+ *     summary: Compare ticket classes for two travel days
+ *     tags:
+ *       - Ticket Classes
+ *     parameters:
+ *       - in: query
+ *         name: day1
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: day2
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Ticket classes for both days.
+ *       '400':
+ *         description: Invalid or missing day.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/ticket-classes/compare', getTicketClassesComparison);
 
 
 

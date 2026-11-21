@@ -1,0 +1,42 @@
+<%- include('./partials/header') %>
+
+<main>
+  <h1>Compare Ticket Classes</h1>
+  <p>Select two travel days to compare available ticket classes.</p>
+
+  <label for="day1">First day:</label>
+  <select id="day1">
+    <option value="monday">Monday</option>
+    <option value="tuesday">Tuesday</option>
+    <option value="wednesday">Wednesday</option>
+    <option value="thursday">Thursday</option>
+    <option value="friday">Friday</option>
+    <option value="saturday">Saturday</option>
+    <option value="sunday">Sunday</option>
+  </select>
+
+  <label for="day2">Second day:</label>
+  <select id="day2">
+    <option value="monday">Monday</option>
+    <option value="tuesday">Tuesday</option>
+    <option value="wednesday">Wednesday</option>
+    <option value="thursday">Thursday</option>
+    <option value="friday" selected>Friday</option>
+    <option value="saturday">Saturday</option>
+    <option value="sunday">Sunday</option>
+  </select>
+
+  <p id="comparison-status" role="status">Loading comparison...</p>
+  <div id="comparison-results"></div>
+
+  <template id="ticket-class-template">
+    <li>
+      <strong class="ticket-class-name"></strong>
+      <span class="ticket-class-price"></span>
+    </li>
+  </template>
+</main>
+
+<script src="/js/ticket-class-comparison.js" defer></script>
+
+<%- include('./partials/footer') %>
