@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (data.user.role === 'admin') {
-                window.location.assign('/');
+                window.location.assign('/admin');
             } else {
                 window.location.assign('/dashboard');
             }
