@@ -3,8 +3,9 @@ import { Router } from 'express';
 import { homePage, aboutPage, testErrorPage } from './index.js';
 import { trainsPage } from './trains.js';
 import tripsPageRouter from './trips.js';
-import { bookingsAdminPage } from '../controllers/bookings.js';
 
+import { bookingsAdminPage } from '../controllers/bookings.js';
+import { tripsAdminPage } from '../controllers/trips.js';
 import { getUsersPage } from '../controllers/users.js';
 import { requirePageLogin, requirePageRole } from '../middleware/auth.js';
 
@@ -66,6 +67,9 @@ router.get('/trains', trainsPage);
  */
 // Bookings Admin page
 router.get('/bookings-admin', requirePageLogin, bookingsAdminPage);
+
+// Protected Trip Admin page - admin access only
+router.get('/trips-admin', requirePageRole('admin'), tripsAdminPage);
 
 // User Management page
 router.get('/admin/users', requirePageLogin, getUsersPage);

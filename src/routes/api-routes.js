@@ -7,11 +7,17 @@ import {
 } from '../controllers/ticket-classes.js';
 
 import {
+    getAllSchedules,
     getSchedulesForTrip,
     getSchedulesForTripAndMonth
 } from '../controllers/schedules.js';
 
-import { getAllTrips, getTripById } from '../controllers/trips.js';
+import {
+    getAllTrips,
+    getTripById,
+    updateTrip,
+    deleteTrip
+} from '../controllers/trips.js';
 
 import { getAllStations, getStationById } from '../controllers/stations.js';
 
@@ -33,7 +39,6 @@ import {
 } from '../middleware/auth.js';
 
 const router = Router();
-
 
 /**
  * @openapi
@@ -104,20 +109,6 @@ router.get('/trains', trainsApi);
  *       '500':
  *         description: Internal server error.
  */
-/*
- * PLAIN ENGLISH: This is the address the booking page calls to ask which
- *   ticket classes exist, or which ones are offered on a certain day.
- * LOGIC: One address handles both questions. If the request includes a day
- *   (?day=tuesday), it is passed to getTicketClassesForDay. If there is no
- *   day, it is passed to getAllTicketClasses.
- * WHY WE NEED IT: The assignment asks for /api/ticket-classes and
- *   /api/ticket-classes?day={day}. The part after the question mark is not
- *   part of the address, so both arrive at this same route.
- * LEARNING GAP: This file only writes '/ticket-classes'. The '/api' in front
- *   is added by src/routes/router.js. The data itself comes from the
- *   controller, which gets it from the model and the ticketClasses
- *   collection.
- */
 // Ticket Classes API
 router.get('/ticket-classes', (req, res) => {
     if (req.query.day !== undefined) {
@@ -126,8 +117,6 @@ router.get('/ticket-classes', (req, res) => {
 
     return getAllTicketClasses(req, res);
 });
-
-
 
 /**
  * @openapi
@@ -174,6 +163,21 @@ router.get('/trips/:id/schedules', (req, res) => {
     return getSchedulesForTrip(req, res);
 });
 
+/**
+ * @openapi
+ * /schedules:
+ *   get:
+ *     summary: Get all schedules
+ *     description: Returns all schedules in the Kizuna Rail database.
+ *     tags:
+ *       - Schedules
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved schedules.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/schedules', getAllSchedules);
 
 /**
  * @openapi
@@ -222,9 +226,96 @@ router.get('/trips', getAllTrips);
  *         description: Trip not found.
  *       '500':
  *         description: Internal server error.
+ *   put:
+ *     summary: Update a trip (Admin only)
+ *     description: Requires admin role. Updates trip details and optionally reassigns existing schedules to this trip.
+ *     tags:
+ *       - Trips
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique trip ID.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - startStation
+ *               - endStation
+ *               - region
+ *               - duration
+ *               - distance
+ *             properties:
+ *               name:
+ *                 type: string
+ *               startStation:
+ *                 type: string
+ *               endStation:
+ *                 type: string
+ *               region:
+ *                 type: string
+ *               duration:
+ *                 type: string
+ *               distance:
+ *                 type: number
+ *               operatingMonths:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *               bestSeason:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               scheduleIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       '200':
+ *         description: Trip updated successfully.
+ *       '400':
+ *         description: Missing or invalid trip fields.
+ *       '401':
+ *         description: Authentication required.
+ *       '403':
+ *         description: Forbidden - admin role required.
+ *       '404':
+ *         description: Trip not found.
+ *       '500':
+ *         description: Internal server error.
+ *   delete:
+ *     summary: Delete a trip (Admin only)
+ *     description: Requires admin role. Deletes a trip from the database.
+ *     tags:
+ *       - Trips
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique trip ID.
+ *     responses:
+ *       '204':
+ *         description: Trip deleted successfully.
+ *       '401':
+ *         description: Authentication required.
+ *       '403':
+ *         description: Forbidden - admin role required.
+ *       '404':
+ *         description: Trip not found.
+ *       '500':
+ *         description: Internal server error.
  */
 router.get('/trips/:id', getTripById);
-
+router.put('/trips/:id', requireApiRole('admin'), updateTrip);
+router.delete('/trips/:id', requireApiRole('admin'), deleteTrip);
 
 /**
  * @openapi
@@ -317,25 +408,6 @@ router.get('/stations/:id', getStationById);
  *         description: Not logged in.
  *       '500':
  *         description: Internal server error.
- */
-/*
- * PLAIN ENGLISH: This is the address the Bookings Admin page calls to get
- *   the list of bookings for whoever is logged in.
- * LOGIC: requireApiLogin runs first and sends 401 JSON if nobody is logged
- *   in. Otherwise, the request goes to the getAllBookings controller, which
- *   sends all bookings to an admin and only matching bookings to everyone
- *   else.
- * WHY WE NEED IT: The Bookings feature (issue #16) created /api/bookings.
- *   Feature Set 4 (issue #19) changed who can use it: every logged-in user,
- *   each seeing the right list.
- * LEARNING GAP: Feature Set 1 first used requireApiRole('admin') here, which
- *   blocked normal users with 403. requireApiLogin only checks "logged in?"
- *   and the controller decides which bookings to send.
- *   This file only writes '/bookings'. The '/api' in front is added by
- *   src/routes/router.js. The Swagger notes above are what make this route
- *   show up at /api-docs.
- * DATA COMES FROM: getAllBookings in src/controllers/bookings.js, which gets
- *   the list from the model and the "bookings" collection.
  */
 // Bookings API
 router.get('/bookings', requireApiLogin, getAllBookings);
@@ -436,21 +508,6 @@ router.get('/bookings', requireApiLogin, getAllBookings);
  *         description: No booking with that id.
  *       '500':
  *         description: Internal server error.
- */
-/*
- * PLAIN ENGLISH: The addresses for editing and deleting one booking.
- * LOGIC: Both use the booking's confirmation code in the URL (:id).
- *   requireApiLogin runs first and sends 401 if nobody is logged in.
- *   Then updateBooking or deleteBooking checks that the booking exists
- *   (404) and that the user is an admin or a passenger (403).
- * WHY WE NEED IT: Feature Set 4 (issue #19) asks for the ability to update
- *   and delete bookings through the API, secured for passengers and admins.
- * LEARNING GAP: PUT means "replace these fields with new values" and DELETE
- *   means "remove this one." The same address (/bookings/:id) does two
- *   different jobs depending on the method. One Swagger block can describe
- *   both because they share the same path.
- * DATA COMES FROM: req.params.id (the code in the URL), req.body (the edit
- *   form, for PUT), and req.user (the login session).
  */
 router.put('/bookings/:id', requireApiLogin, updateBooking);
 router.delete('/bookings/:id', requireApiLogin, deleteBooking);

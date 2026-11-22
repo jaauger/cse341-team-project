@@ -1,0 +1,119 @@
+<%- include('../partials/header') %>
+
+<section class="trip-admin">
+    <h1>Trip Administration</h1>
+    <p id="trip-status-message" role="status" aria-live="polite"></p>
+    <div id="trip-list" class="trip-admin-list">
+        <p>Loading trips...</p>
+    </div>
+</section>
+
+<template id="trip-card-template">
+    <article class="trip-card" data-trip-id="">
+        <h2 class="trip-name"></h2>
+        <p class="trip-description"></p>
+        <p>
+            <strong>Route:</strong>
+            <span class="trip-start"></span> &rarr; <span class="trip-end"></span>
+        </p>
+        <p>
+            <strong>Details:</strong>
+            <span class="trip-meta"></span>
+        </p>
+        <p>
+            <strong>Operating Months:</strong>
+            <span class="trip-months"></span>
+        </p>
+        <p>
+            <strong>Assigned Schedules:</strong>
+            <span class="trip-schedules"></span>
+        </p>
+        <div class="trip-card-actions">
+            <button type="button" data-action="edit">Edit</button>
+            <button type="button" data-action="delete">Delete</button>
+        </div>
+    </article>
+</template>
+
+<template id="trip-edit-template">
+    <form class="trip-edit-form" data-trip-id="">
+        <div class="form-field">
+            <label>
+                Trip Name
+                <input type="text" name="name" required />
+            </label>
+        </div>
+
+        <div class="form-field">
+            <label>
+                Description
+                <textarea name="description" rows="3"></textarea>
+            </label>
+        </div>
+
+        <div class="form-field">
+            <label>
+                Start Station
+                <select name="startStation" required></select>
+            </label>
+        </div>
+
+        <div class="form-field">
+            <label>
+                End Station
+                <select name="endStation" required></select>
+            </label>
+        </div>
+
+        <div class="form-field">
+            <label>
+                Region
+                <input type="text" name="region" required />
+            </label>
+        </div>
+
+        <div class="form-field">
+            <label>
+                Duration
+                <input type="text" name="duration" required />
+            </label>
+        </div>
+
+        <div class="form-field">
+            <label>
+                Distance (km)
+                <input type="number" name="distance" min="1" required />
+            </label>
+        </div>
+
+        <div class="form-field">
+            <label>
+                Best Season
+                <input type="text" name="bestSeason" />
+            </label>
+        </div>
+
+        <div class="form-field">
+            <label>
+                Operating Months (comma-separated numbers 1-12)
+                <input type="text" name="operatingMonths" required />
+            </label>
+        </div>
+
+        <div class="form-field">
+            <label>
+                Schedules (hold Ctrl/Cmd to select multiple existing schedules)
+                <select name="schedules" multiple size="5"></select>
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Save Changes</button>
+            <button type="button" data-action="cancel">Cancel</button>
+        </div>
+    </form>
+</template>
+
+<script src="/js/trips-admin.js" defer></script>
+
+<%- include('../partials/footer') %>

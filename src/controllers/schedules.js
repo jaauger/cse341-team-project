@@ -1,4 +1,7 @@
-import { getSchedulesByTripId } from '../models/schedules.js';
+import {
+    getSchedulesByTripId,
+    getAllSchedules as findAllSchedules
+} from '../models/schedules.js';
 
 export async function getSchedulesForTrip(req, res) {
     try {
@@ -32,3 +35,13 @@ export async function getSchedulesForTripAndMonth(req, res) {
         });
     }
 }
+
+export const getAllSchedules = async (req, res) => {
+    try {
+        const schedules = await findAllSchedules();
+        return res.status(200).json(schedules);
+    } catch (error) {
+        console.error('Error fetching all schedules:', error);
+        return res.status(500).json({ message: 'Failed to fetch schedules.' });
+    }
+};
