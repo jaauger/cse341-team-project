@@ -4,6 +4,8 @@ import { homePage, aboutPage, testErrorPage } from './index.js';
 import { trainsPage } from './trains.js';
 import tripsPageRouter from './trips.js';
 import { bookingsAdminPage } from '../controllers/bookings.js';
+import { tripsAdminPage } from '../controllers/trips.js';
+
 /*
  * PLAIN ENGLISH: Brings in the two "door guard" helpers from the auth file.
  *   requirePageLogin checks "are you logged in?" requirePageRole checks
@@ -74,6 +76,9 @@ router.get('/trains', trainsPage);
  */
 // Bookings Admin page
 router.get('/bookings-admin', requirePageLogin, bookingsAdminPage);
+
+// Protected Trip Admin page - admin access only
+router.get('/trips-admin', requirePageRole('admin'), tripsAdminPage);
 
 // Rail trips, bookings, and confirmations
 router.use('/trips', tripsPageRouter);

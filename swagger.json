@@ -158,6 +158,23 @@
         }
       }
     },
+    "/schedules": {
+      "get": {
+        "summary": "Get all schedules",
+        "description": "Returns all schedules in the Kizuna Rail database.",
+        "tags": [
+          "Schedules"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved schedules."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
     "/trips": {
       "get": {
         "summary": "Get all trips",
@@ -220,6 +237,135 @@
             "description": "Internal server error."
           }
         }
+      },
+      "put": {
+        "summary": "Update a trip (Admin only)",
+        "description": "Requires admin role. Updates trip details and optionally reassigns existing schedules to this trip.",
+        "tags": [
+          "Trips"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique trip ID."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "startStation",
+                  "endStation",
+                  "region",
+                  "duration",
+                  "distance"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "startStation": {
+                    "type": "string"
+                  },
+                  "endStation": {
+                    "type": "string"
+                  },
+                  "region": {
+                    "type": "string"
+                  },
+                  "duration": {
+                    "type": "string"
+                  },
+                  "distance": {
+                    "type": "number"
+                  },
+                  "operatingMonths": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "bestSeason": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "scheduleIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Trip updated successfully."
+          },
+          "400": {
+            "description": "Missing or invalid trip fields."
+          },
+          "401": {
+            "description": "Authentication required."
+          },
+          "403": {
+            "description": "Forbidden - admin role required."
+          },
+          "404": {
+            "description": "Trip not found."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a trip (Admin only)",
+        "description": "Requires admin role. Deletes a trip from the database.",
+        "tags": [
+          "Trips"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique trip ID."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Trip deleted successfully."
+          },
+          "401": {
+            "description": "Authentication required."
+          },
+          "403": {
+            "description": "Forbidden - admin role required."
+          },
+          "404": {
+            "description": "Trip not found."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
       }
     },
     "/stations": {
@@ -270,8 +416,8 @@
     },
     "/bookings": {
       "get": {
-        "summary": "Get all bookings",
-        "description": "Returns every booking in the Kizuna Rail database, newest first. The Bookings Admin page uses this to fill in its list.",
+        "summary": "Get bookings for the logged-in user",
+        "description": "Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Newest first. The Bookings Admin page uses this to fill in its list.",
         "tags": [
           "Bookings"
         ],
@@ -334,6 +480,148 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Not logged in."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
+    "/bookings/{id}": {
+      "put": {
+        "summary": "Update a booking",
+        "description": "Requires login. Admins can update any booking. Other users can update only bookings where they are a passenger. Only ticketClass, selectedDay, and passengers can be changed.",
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The booking confirmation code, like KR-AB12CD."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ticketClass",
+                  "selectedDay",
+                  "passengers"
+                ],
+                "properties": {
+                  "ticketClass": {
+                    "type": "string",
+                    "description": "Must match an existing ticket class code.",
+                    "example": "standard"
+                  },
+                  "selectedDay": {
+                    "type": "string",
+                    "description": "A day name from monday to sunday.",
+                    "example": "tuesday"
+                  },
+                  "passengers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "firstName",
+                        "lastName",
+                        "email"
+                      ],
+                      "properties": {
+                        "firstName": {
+                          "type": "string",
+                          "example": "Sina"
+                        },
+                        "lastName": {
+                          "type": "string",
+                          "example": "McBraun"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "sina@example.com"
+                        },
+                        "phone": {
+                          "type": "string",
+                          "example": "808-555-0100"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking updated. Returns the updated booking.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid fields."
+          },
+          "401": {
+            "description": "Not logged in."
+          },
+          "403": {
+            "description": "Logged in, but not a passenger on this booking and not an admin."
+          },
+          "404": {
+            "description": "No booking with that id."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a booking",
+        "description": "Requires login. Admins can delete any booking. Other users can delete only bookings where they are a passenger.",
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The booking confirmation code, like KR-AB12CD."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Booking deleted. No content is returned."
+          },
+          "401": {
+            "description": "Not logged in."
+          },
+          "403": {
+            "description": "Logged in, but not a passenger on this booking and not an admin."
+          },
+          "404": {
+            "description": "No booking with that id."
           },
           "500": {
             "description": "Internal server error."
