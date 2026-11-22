@@ -29,7 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            window.location.assign('/');
+            if (data.user.role === 'admin') {
+                window.location.assign('/admin');
+            } else {
+                window.location.assign('/dashboard');
+            }
         } catch (error) {
             console.error('Login request failed:', error);
             loginMessage.textContent =

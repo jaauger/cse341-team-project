@@ -37,6 +37,13 @@ router.get('/admin', requirePageRole('admin'), (req, res) => {
     });
 });
 
+// User dashboard - available to signed-in users
+router.get('/dashboard', requirePageLogin, (req, res) => {
+    res.render('dashboard', {
+        title: 'Dashboard | Kizuna Rail'
+    });
+});
+
 // Trains page
 router.get('/trains', trainsPage);
 
