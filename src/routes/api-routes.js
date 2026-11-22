@@ -15,10 +15,22 @@ import { getAllTrips, getTripById } from '../controllers/trips.js';
 
 import { getAllStations, getStationById } from '../controllers/stations.js';
 
-import { getAllBookings } from '../controllers/bookings.js';
-import { getUsers, updateUserRole, deleteUser } from '../controllers/users.js';
+import {
+    getAllBookings,
+    updateBooking,
+    deleteBooking
+} from '../controllers/bookings.js';
 
-import { requireApiLogin, requireApiRole } from '../middleware/auth.js';
+import {
+    getUsers,
+    updateUserRole,
+    deleteUser
+} from '../controllers/users.js';
+
+import {
+    requireApiLogin,
+    requireApiRole
+} from '../middleware/auth.js';
 
 const router = Router();
 
@@ -257,8 +269,8 @@ router.get('/stations/:id', getStationById);
  * @openapi
  * /bookings:
  *   get:
- *     summary: Get all bookings
- *     description: Returns every booking in the Kizuna Rail database, newest first. The Bookings Admin page uses this to fill in its list.
+ *     summary: Get bookings for the logged-in user
+ *     description: Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Newest first. The Bookings Admin page uses this to fill in its list.
  *     tags:
  *       - Bookings
  *     responses:
@@ -301,24 +313,147 @@ router.get('/stations/:id', getStationById);
  *                   updatedAt:
  *                     type: string
  *                     format: date-time
+ *       '401':
+ *         description: Not logged in.
  *       '500':
  *         description: Internal server error.
  */
 /*
  * PLAIN ENGLISH: This is the address the Bookings Admin page calls to get
- *   the list of all bookings.
- * LOGIC: When a GET request arrives at /bookings, it is passed straight to
- *   the getAllBookings controller function, which sends back the list.
- * WHY WE NEED IT: The Bookings feature (issue #16) asks for /api/bookings
- *   with Swagger documentation.
- * LEARNING GAP: This file only writes '/bookings'. The '/api' in front is
- *   added by src/routes/router.js. The Swagger notes above are what make
- *   this route show up at /api-docs.
+ *   the list of bookings for whoever is logged in.
+ * LOGIC: requireApiLogin runs first and sends 401 JSON if nobody is logged
+ *   in. Otherwise, the request goes to the getAllBookings controller, which
+ *   sends all bookings to an admin and only matching bookings to everyone
+ *   else.
+ * WHY WE NEED IT: The Bookings feature (issue #16) created /api/bookings.
+ *   Feature Set 4 (issue #19) changed who can use it: every logged-in user,
+ *   each seeing the right list.
+ * LEARNING GAP: Feature Set 1 first used requireApiRole('admin') here, which
+ *   blocked normal users with 403. requireApiLogin only checks "logged in?"
+ *   and the controller decides which bookings to send.
+ *   This file only writes '/bookings'. The '/api' in front is added by
+ *   src/routes/router.js. The Swagger notes above are what make this route
+ *   show up at /api-docs.
  * DATA COMES FROM: getAllBookings in src/controllers/bookings.js, which gets
  *   the list from the model and the "bookings" collection.
  */
 // Bookings API
-router.get('/bookings', requireApiRole('admin'), getAllBookings);
+router.get('/bookings', requireApiLogin, getAllBookings);
+
+/**
+ * @openapi
+ * /bookings/{id}:
+ *   put:
+ *     summary: Update a booking
+ *     description: Requires login. Admins can update any booking. Other users can update only bookings where they are a passenger. Only ticketClass, selectedDay, and passengers can be changed.
+ *     tags:
+ *       - Bookings
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The booking confirmation code, like KR-AB12CD.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ticketClass
+ *               - selectedDay
+ *               - passengers
+ *             properties:
+ *               ticketClass:
+ *                 type: string
+ *                 description: Must match an existing ticket class code.
+ *                 example: standard
+ *               selectedDay:
+ *                 type: string
+ *                 description: A day name from monday to sunday.
+ *                 example: tuesday
+ *               passengers:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - firstName
+ *                     - lastName
+ *                     - email
+ *                   properties:
+ *                     firstName:
+ *                       type: string
+ *                       example: Sina
+ *                     lastName:
+ *                       type: string
+ *                       example: McBraun
+ *                     email:
+ *                       type: string
+ *                       example: sina@example.com
+ *                     phone:
+ *                       type: string
+ *                       example: 808-555-0100
+ *     responses:
+ *       '200':
+ *         description: Booking updated. Returns the updated booking.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       '400':
+ *         description: Missing or invalid fields.
+ *       '401':
+ *         description: Not logged in.
+ *       '403':
+ *         description: Logged in, but not a passenger on this booking and not an admin.
+ *       '404':
+ *         description: No booking with that id.
+ *       '500':
+ *         description: Internal server error.
+ *   delete:
+ *     summary: Delete a booking
+ *     description: Requires login. Admins can delete any booking. Other users can delete only bookings where they are a passenger.
+ *     tags:
+ *       - Bookings
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The booking confirmation code, like KR-AB12CD.
+ *     responses:
+ *       '204':
+ *         description: Booking deleted. No content is returned.
+ *       '401':
+ *         description: Not logged in.
+ *       '403':
+ *         description: Logged in, but not a passenger on this booking and not an admin.
+ *       '404':
+ *         description: No booking with that id.
+ *       '500':
+ *         description: Internal server error.
+ */
+/*
+ * PLAIN ENGLISH: The addresses for editing and deleting one booking.
+ * LOGIC: Both use the booking's confirmation code in the URL (:id).
+ *   requireApiLogin runs first and sends 401 if nobody is logged in.
+ *   Then updateBooking or deleteBooking checks that the booking exists
+ *   (404) and that the user is an admin or a passenger (403).
+ * WHY WE NEED IT: Feature Set 4 (issue #19) asks for the ability to update
+ *   and delete bookings through the API, secured for passengers and admins.
+ * LEARNING GAP: PUT means "replace these fields with new values" and DELETE
+ *   means "remove this one." The same address (/bookings/:id) does two
+ *   different jobs depending on the method. One Swagger block can describe
+ *   both because they share the same path.
+ * DATA COMES FROM: req.params.id (the code in the URL), req.body (the edit
+ *   form, for PUT), and req.user (the login session).
+ */
+router.put('/bookings/:id', requireApiLogin, updateBooking);
+router.delete('/bookings/:id', requireApiLogin, deleteBooking);
 
 /**
  * @openapi
