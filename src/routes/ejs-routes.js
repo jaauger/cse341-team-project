@@ -4,23 +4,8 @@ import { homePage, aboutPage, testErrorPage } from './index.js';
 import { trainsPage } from './trains.js';
 import tripsPageRouter from './trips.js';
 import { bookingsAdminPage } from '../controllers/bookings.js';
-/*
- * PLAIN ENGLISH: Brings in the two "door guard" helpers from the auth file.
- *   requirePageLogin checks "are you logged in?" requirePageRole checks
- *   "are you logged in AND do you have this role (like admin)?"
- * LOGIC: Each route below picks the guard it needs. /bookings-admin uses
- *   requirePageLogin. Jason's /admin (Admin Dashboard) uses
- *   requirePageRole('admin').
- * WHY WE NEED IT: A route can only use a helper that is imported at the top
- *   of the file. Without it, the server crashes with "requirePageRole is not
- *   defined."
- * LEARNING GAP: When main was merged into protected-booking-admin, Git kept
- *   this branch's import line (requirePageLogin only), because the
- *   Feature Set 4 work had replaced requirePageRole with requirePageLogin
- *   here. Jason's new /admin route still needed requirePageRole, so both
- *   must be imported. Git can merge without a "conflict" and the code can
- *   still be missing something, so always run the server after a merge.
- */
+
+import { getUsersPage } from '../controllers/users.js';
 import { requirePageLogin, requirePageRole } from '../middleware/auth.js';
 
 const router = Router();
@@ -74,6 +59,9 @@ router.get('/trains', trainsPage);
  */
 // Bookings Admin page
 router.get('/bookings-admin', requirePageLogin, bookingsAdminPage);
+
+// User Management page
+router.get('/admin/users', requirePageLogin, getUsersPage);
 
 // Rail trips, bookings, and confirmations
 router.use('/trips', tripsPageRouter);
