@@ -1,6 +1,7 @@
 
 import bcrypt from 'bcrypt';
 import User from './schemas/users.js';
+import Role from './schemas/roles.js';
 
 const createUser = async (userData) => {
     return await User.create(userData);
@@ -9,6 +10,34 @@ const createUser = async (userData) => {
 const findUserByEmail = async (email) => {
     return await User.findOne({ email: email.toLowerCase() })
         .populate('role');
+};
+
+const getUsers = async () => {
+    return await User.find({})
+        .populate('role');
+};
+
+const getUserById = async (id) => {
+    return await User.findById(id)
+        .populate('role');
+};
+
+const updateUserRole = async (id, roleName) => {
+    const role = await Role.findOne({ name: roleName });
+
+    if (!role) {
+        return null;
+    }
+
+    return await User.findByIdAndUpdate(
+        id,
+        { role: role._id },
+        { new: true, runValidators: true }
+    ).populate('role');
+};
+
+const deleteUser = async (id) => {
+    return await User.findByIdAndDelete(id);
 };
 
 const hashPassword = async (password) => {
@@ -21,5 +50,6 @@ const verifyPassword = async (password, passwordHash) => {
 };
 
 export { createUser, findUserByEmail,
+         getUsers, getUserById, updateUserRole, deleteUser,
          hashPassword, verifyPassword
  };

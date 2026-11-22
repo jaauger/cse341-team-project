@@ -1,0 +1,12 @@
+<%- include('./partials/header') %>
+    <h1>Welcome, <%= user.displayName %>!</h1>
+    <section>
+        <h2>My Bookings</h2>
+        <p id="bookings-status">Your bookings will appear here.</p>
+        <ul id="bookings-list"></ul>
+    </section>
+    <p>
+        <a href="/bookings-admin">Manage My Bookings</a>
+    </p>
+    <script src="/js/dashboard.js" defer></script>
+    <%- include('./partials/footer') %>

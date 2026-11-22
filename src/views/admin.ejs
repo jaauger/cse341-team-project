@@ -1,0 +1,53 @@
+<%- include('./partials/header') %>
+
+<section class="users-hero" id="users-page" data-is-admin="<%= isAdmin ? 'true' : 'false' %>">
+    <h1>User Management</h1>
+    <p>View account information and manage user roles.</p>
+</section>
+
+<section class="users-catalog">
+    <div class="users-state" id="users-loading" aria-live="polite">
+        Loading users...
+    </div>
+    <div class="users-state users-error" id="users-error" role="alert" hidden></div>
+    <div class="users-state" id="users-success" aria-live="polite" hidden></div>
+    <div class="users-state" id="users-empty" aria-live="polite" hidden>
+        No users found.
+    </div>
+
+    <div class="users-grid" id="users-list"></div>
+
+    <template id="user-card-template">
+        <article class="user-card">
+            <div class="user-card-header">
+                <h2 data-field="display-name"></h2>
+                <span class="user-role" data-field="role"></span>
+            </div>
+
+            <dl class="user-details">
+                <div class="detail-item">
+                    <dt>Username</dt>
+                    <dd data-field="username"></dd>
+                </div>
+                <div class="detail-item">
+                    <dt>Email</dt>
+                    <dd data-field="email"></dd>
+                </div>
+            </dl>
+
+            <div class="user-actions" data-field="actions" hidden>
+                <label>
+                    Role
+                    <select data-field="role-select">
+                        <option value="customer">Customer</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </label>
+                <button type="button" data-action="delete">Delete user</button>
+            </div>
+        </article>
+    </template>
+</section>
+
+<script src="/js/users-admin.js" defer></script>
+<%- include('./partials/footer') %>
