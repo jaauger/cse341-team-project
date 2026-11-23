@@ -8,20 +8,38 @@ import {
 } from '../controllers/ticket-classes.js';
 
 import {
+    getAllSchedules,
     getSchedulesForTrip,
     getSchedulesForTripAndMonth
 } from '../controllers/schedules.js';
 
-import { getAllTrips, getTripById } from '../controllers/trips.js';
+import {
+    getAllTrips,
+    getTripById,
+    updateTrip,
+    deleteTrip
+} from '../controllers/trips.js';
 
 import { getAllStations, getStationById } from '../controllers/stations.js';
 
-import { getAllBookings } from '../controllers/bookings.js';
+import {
+    getAllBookings,
+    updateBooking,
+    deleteBooking
+} from '../controllers/bookings.js';
 
-import { requireApiRole } from '../middleware/auth.js';
+import {
+    getUsers,
+    updateUserRole,
+    deleteUser
+} from '../controllers/users.js';
+
+import {
+    requireApiLogin,
+    requireApiRole
+} from '../middleware/auth.js';
 
 const router = Router();
-
 
 /**
  * @openapi
@@ -92,20 +110,6 @@ router.get('/trains', trainsApi);
  *       '500':
  *         description: Internal server error.
  */
-/*
- * PLAIN ENGLISH: This is the address the booking page calls to ask which
- *   ticket classes exist, or which ones are offered on a certain day.
- * LOGIC: One address handles both questions. If the request includes a day
- *   (?day=tuesday), it is passed to getTicketClassesForDay. If there is no
- *   day, it is passed to getAllTicketClasses.
- * WHY WE NEED IT: The assignment asks for /api/ticket-classes and
- *   /api/ticket-classes?day={day}. The part after the question mark is not
- *   part of the address, so both arrive at this same route.
- * LEARNING GAP: This file only writes '/ticket-classes'. The '/api' in front
- *   is added by src/routes/router.js. The data itself comes from the
- *   controller, which gets it from the model and the ticketClasses
- *   collection.
- */
 // Ticket Classes API
 router.get('/ticket-classes', (req, res) => {
     if (req.query.day !== undefined) {
@@ -142,8 +146,6 @@ router.get('/ticket-classes', (req, res) => {
  *         description: Internal server error.
  */
 router.get('/ticket-classes/compare', getTicketClassesComparison);
-
-
 
 /**
  * @openapi
@@ -190,6 +192,21 @@ router.get('/trips/:id/schedules', (req, res) => {
     return getSchedulesForTrip(req, res);
 });
 
+/**
+ * @openapi
+ * /schedules:
+ *   get:
+ *     summary: Get all schedules
+ *     description: Returns all schedules in the Kizuna Rail database.
+ *     tags:
+ *       - Schedules
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved schedules.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/schedules', getAllSchedules);
 
 /**
  * @openapi
@@ -238,9 +255,96 @@ router.get('/trips', getAllTrips);
  *         description: Trip not found.
  *       '500':
  *         description: Internal server error.
+ *   put:
+ *     summary: Update a trip (Admin only)
+ *     description: Requires admin role. Updates trip details and optionally reassigns existing schedules to this trip.
+ *     tags:
+ *       - Trips
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique trip ID.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - startStation
+ *               - endStation
+ *               - region
+ *               - duration
+ *               - distance
+ *             properties:
+ *               name:
+ *                 type: string
+ *               startStation:
+ *                 type: string
+ *               endStation:
+ *                 type: string
+ *               region:
+ *                 type: string
+ *               duration:
+ *                 type: string
+ *               distance:
+ *                 type: number
+ *               operatingMonths:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *               bestSeason:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               scheduleIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       '200':
+ *         description: Trip updated successfully.
+ *       '400':
+ *         description: Missing or invalid trip fields.
+ *       '401':
+ *         description: Authentication required.
+ *       '403':
+ *         description: Forbidden - admin role required.
+ *       '404':
+ *         description: Trip not found.
+ *       '500':
+ *         description: Internal server error.
+ *   delete:
+ *     summary: Delete a trip (Admin only)
+ *     description: Requires admin role. Deletes a trip from the database.
+ *     tags:
+ *       - Trips
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique trip ID.
+ *     responses:
+ *       '204':
+ *         description: Trip deleted successfully.
+ *       '401':
+ *         description: Authentication required.
+ *       '403':
+ *         description: Forbidden - admin role required.
+ *       '404':
+ *         description: Trip not found.
+ *       '500':
+ *         description: Internal server error.
  */
 router.get('/trips/:id', getTripById);
-
+router.put('/trips/:id', requireApiRole('admin'), updateTrip);
+router.delete('/trips/:id', requireApiRole('admin'), deleteTrip);
 
 /**
  * @openapi
@@ -285,8 +389,8 @@ router.get('/stations/:id', getStationById);
  * @openapi
  * /bookings:
  *   get:
- *     summary: Get all bookings
- *     description: Returns every booking in the Kizuna Rail database, newest first. The Bookings Admin page uses this to fill in its list.
+ *     summary: Get bookings for the logged-in user
+ *     description: Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Newest first. The Bookings Admin page uses this to fill in its list.
  *     tags:
  *       - Bookings
  *     responses:
@@ -329,23 +433,249 @@ router.get('/stations/:id', getStationById);
  *                   updatedAt:
  *                     type: string
  *                     format: date-time
+ *       '401':
+ *         description: Not logged in.
  *       '500':
  *         description: Internal server error.
  */
-/*
- * PLAIN ENGLISH: This is the address the Bookings Admin page calls to get
- *   the list of all bookings.
- * LOGIC: When a GET request arrives at /bookings, it is passed straight to
- *   the getAllBookings controller function, which sends back the list.
- * WHY WE NEED IT: The Bookings feature (issue #16) asks for /api/bookings
- *   with Swagger documentation.
- * LEARNING GAP: This file only writes '/bookings'. The '/api' in front is
- *   added by src/routes/router.js. The Swagger notes above are what make
- *   this route show up at /api-docs.
- * DATA COMES FROM: getAllBookings in src/controllers/bookings.js, which gets
- *   the list from the model and the "bookings" collection.
- */
 // Bookings API
-router.get('/bookings', requireApiRole('admin'), getAllBookings);
+router.get('/bookings', requireApiLogin, getAllBookings);
+
+/**
+ * @openapi
+ * /bookings/{id}:
+ *   put:
+ *     summary: Update a booking
+ *     description: Requires login. Admins can update any booking. Other users can update only bookings where they are a passenger. Only ticketClass, selectedDay, and passengers can be changed.
+ *     tags:
+ *       - Bookings
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The booking confirmation code, like KR-AB12CD.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ticketClass
+ *               - selectedDay
+ *               - passengers
+ *             properties:
+ *               ticketClass:
+ *                 type: string
+ *                 description: Must match an existing ticket class code.
+ *                 example: standard
+ *               selectedDay:
+ *                 type: string
+ *                 description: A day name from monday to sunday.
+ *                 example: tuesday
+ *               passengers:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - firstName
+ *                     - lastName
+ *                     - email
+ *                   properties:
+ *                     firstName:
+ *                       type: string
+ *                       example: Sina
+ *                     lastName:
+ *                       type: string
+ *                       example: McBraun
+ *                     email:
+ *                       type: string
+ *                       example: sina@example.com
+ *                     phone:
+ *                       type: string
+ *                       example: 808-555-0100
+ *     responses:
+ *       '200':
+ *         description: Booking updated. Returns the updated booking.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       '400':
+ *         description: Missing or invalid fields.
+ *       '401':
+ *         description: Not logged in.
+ *       '403':
+ *         description: Logged in, but not a passenger on this booking and not an admin.
+ *       '404':
+ *         description: No booking with that id.
+ *       '500':
+ *         description: Internal server error.
+ *   delete:
+ *     summary: Delete a booking
+ *     description: Requires login. Admins can delete any booking. Other users can delete only bookings where they are a passenger.
+ *     tags:
+ *       - Bookings
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The booking confirmation code, like KR-AB12CD.
+ *     responses:
+ *       '204':
+ *         description: Booking deleted. No content is returned.
+ *       '401':
+ *         description: Not logged in.
+ *       '403':
+ *         description: Logged in, but not a passenger on this booking and not an admin.
+ *       '404':
+ *         description: No booking with that id.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.put('/bookings/:id', requireApiLogin, updateBooking);
+router.delete('/bookings/:id', requireApiLogin, deleteBooking);
+
+/**
+ * @openapi
+ * /users:
+ *   get:
+ *     summary: Get the authenticated user's account or all users
+ *     description: Administrators receive all users. Normal users receive only their own account.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved user data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   displayName:
+ *                     type: string
+ *                   username:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   role:
+ *                     type: string
+ *                     enum:
+ *                       - customer
+ *                       - admin
+ *       '401':
+ *         description: Authentication is required.
+ *       '500':
+ *         description: Internal server error.
+ */
+// Users API
+router.get('/users', requireApiLogin, getUsers);
+
+/**
+ * @openapi
+ * /users/{id}:
+ *   put:
+ *     summary: Update a user's role
+ *     description: Allows an authenticated administrator to change only a user's role.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique user ID.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum:
+ *                   - customer
+ *                   - admin
+ *     responses:
+ *       '200':
+ *         description: User role updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 displayName:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 role:
+ *                   type: string
+ *                   enum:
+ *                     - customer
+ *                     - admin
+ *       '400':
+ *         description: The role is missing or invalid.
+ *       '401':
+ *         description: Authentication is required.
+ *       '403':
+ *         description: Administrator authorization is required.
+ *       '404':
+ *         description: The user was not found.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.put('/users/:id', requireApiRole('admin'), updateUserRole);
+
+/**
+ * @openapi
+ * /users/{id}:
+ *   delete:
+ *     summary: Delete a user
+ *     description: Allows an authenticated administrator to delete a user.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique user ID.
+ *     responses:
+ *       '204':
+ *         description: User deleted successfully.
+ *       '401':
+ *         description: Authentication is required.
+ *       '403':
+ *         description: Administrator authorization is required.
+ *       '404':
+ *         description: The user was not found.
+ *       '500':
+ *         description: Internal server error.
+ */
+router.delete('/users/:id', requireApiRole('admin'), deleteUser);
 
 export default router;
