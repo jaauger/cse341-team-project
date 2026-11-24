@@ -10,11 +10,79 @@ const hookTrainsCatalog = () => {
     const nextEl = document.getElementById('trains-next');
     const pageInfoEl = document.getElementById('trains-page-info');
 
-    if (!listEl || !templateEl) return;
+    // Search, filtering, and sorting controls.
+    const controlsEl = document.getElementById('trains-controls');
+    const searchEl = document.getElementById('trains-search');
+    const typeEl = document.getElementById('trains-type');
+    const powerSourceEl = document.getElementById('trains-power-source');
+    const sortByEl = document.getElementById('trains-sort-by');
+    const sortOrderEl = document.getElementById('trains-sort-order');
 
-    // Track the current page and number of trains per page.
+    if (!listEl || !templateEl || !controlsEl) return;
+
+    // Track pagination and active API requests.
     let currentPage = 1;
     const itemsPerPage = 10;
+    let activeRequest = null;
+
+    // Track the currently applied search and filter criteria.
+    let activeCriteria = {
+        search: '',
+        type: '',
+        powerSource: '',
+        sortBy: 'name',
+        sortOrder: 'asc'
+    };
+
+    // Read the current values from the form controls.
+    const getCriteria = () => ({
+        search: searchEl.value.trim(),
+        type: typeEl.value,
+        powerSource: powerSourceEl.value,
+        sortBy: sortByEl.value,
+        sortOrder: sortOrderEl.value
+    });
+
+    // Populate a dropdown with options returned by the API.
+    const populateOptions = (selectEl, values) => {
+        const fragment = document.createDocumentFragment();
+
+        values.forEach((value) => {
+            const option = document.createElement('option');
+
+            option.value = value;
+            option.textContent = value;
+
+            fragment.appendChild(option);
+        });
+
+        selectEl.appendChild(fragment);
+    };
+
+    // Load available train types and power sources.
+    const loadFilterOptions = async () => {
+        try {
+            const response = await fetch('/api/trains/filters');
+
+            if (!response.ok) {
+                throw new Error(
+                    `Failed to load filter options (${response.status})`
+                );
+            }
+
+            const payload = await response.json();
+
+            populateOptions(typeEl, payload.types);
+            populateOptions(powerSourceEl, payload.powerSources);
+
+        } catch (error) {
+            typeEl.disabled = true;
+            powerSourceEl.disabled = true;
+
+            typeEl.options[0].textContent = 'Types unavailable';
+            powerSourceEl.options[0].textContent = 'Power sources unavailable';
+        }
+    };
 
     // Render the train cards returned by the API.
     const renderTrains = (trains) => {
@@ -55,7 +123,7 @@ const hookTrainsCatalog = () => {
             : firstItem + trainCount - 1;
 
         summaryEl.textContent =
-            `Showing ${firstItem}–${lastItem} of ${pagination.totalItems} trains`;
+            `Showing ${firstItem}\u2013${lastItem} of ${pagination.totalItems} trains`;
 
         pageInfoEl.textContent =
             `Page ${currentPage} of ${Math.max(1, pagination.totalPages)}`;
@@ -67,8 +135,40 @@ const hookTrainsCatalog = () => {
         emptyEl.hidden = trainCount > 0;
     };
 
-    // Request a specific page from the API.
+    // Build the API query using the active criteria.
+    const buildQuery = (page) => {
+        const params = new URLSearchParams({
+            page: String(page),
+            limit: String(itemsPerPage),
+            sortBy: activeCriteria.sortBy,
+            sortOrder: activeCriteria.sortOrder
+        });
+
+        if (activeCriteria.search) {
+            params.set('search', activeCriteria.search);
+        }
+
+        if (activeCriteria.type) {
+            params.set('type', activeCriteria.type);
+        }
+
+        if (activeCriteria.powerSource) {
+            params.set('powerSource', activeCriteria.powerSource);
+        }
+
+        return params.toString();
+    };
+
+    // Request a specific page using the active criteria.
     const loadTrains = async (page = 1) => {
+        // Cancel any previous request that is still running.
+        if (activeRequest) {
+            activeRequest.abort();
+        }
+
+        const controller = new AbortController();
+        activeRequest = controller;
+
         loadingEl.hidden = false;
         errorEl.hidden = true;
         emptyEl.hidden = true;
@@ -78,7 +178,8 @@ const hookTrainsCatalog = () => {
 
         try {
             const response = await fetch(
-                `/api/trains?page=${page}&limit=${itemsPerPage}`
+                `/api/trains?${buildQuery(page)}`,
+                { signal: controller.signal }
             );
 
             if (!response.ok) {
@@ -86,12 +187,23 @@ const hookTrainsCatalog = () => {
             }
 
             const payload = await response.json();
+
+            // Ignore responses from superseded requests.
+            if (activeRequest !== controller) return;
+
             const trains = payload.trains || [];
 
             renderTrains(trains);
             updatePagination(payload.pagination, trains.length);
 
         } catch (error) {
+            if (
+                error.name === 'AbortError' ||
+                activeRequest !== controller
+            ) {
+                return;
+            }
+
             listEl.replaceChildren();
             summaryEl.textContent = '';
             paginationEl.hidden = true;
@@ -101,9 +213,42 @@ const hookTrainsCatalog = () => {
                 'Unable to load trains right now. Please try again in a moment.';
 
         } finally {
-            loadingEl.hidden = true;
+            if (activeRequest === controller) {
+                loadingEl.hidden = true;
+                activeRequest = null;
+            }
         }
     };
+
+    // Apply new criteria and return to the first page.
+    const applyCriteria = () => {
+        activeCriteria = getCriteria();
+        loadTrains(1);
+    };
+
+    // Handle Apply button and Enter key submissions.
+    controlsEl.addEventListener('submit', (event) => {
+        event.preventDefault();
+        applyCriteria();
+    });
+
+    // Automatically apply dropdown changes.
+    [typeEl, powerSourceEl, sortByEl, sortOrderEl].forEach((selectEl) => {
+        selectEl.addEventListener('change', applyCriteria);
+    });
+
+    // Restore default search, filtering, and sorting criteria.
+    controlsEl.addEventListener('reset', (event) => {
+        event.preventDefault();
+
+        searchEl.value = '';
+        typeEl.value = '';
+        powerSourceEl.value = '';
+        sortByEl.value = 'name';
+        sortOrderEl.value = 'asc';
+
+        applyCriteria();
+    });
 
     // Handle pagination button clicks.
     previousEl.addEventListener('click', () => {
@@ -116,7 +261,8 @@ const hookTrainsCatalog = () => {
         loadTrains(currentPage + 1);
     });
 
-    // Load the first page when the catalog opens.
+    // Initialize the catalog.
+    loadFilterOptions();
     loadTrains();
 };
 
