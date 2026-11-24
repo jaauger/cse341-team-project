@@ -45,19 +45,96 @@ const router = Router();
  * @openapi
  * /trains:
  *   get:
- *     summary: Get all trains
- *     description: Returns the available trains in the Kizuna Rail database.
+ *     summary: Get a paginated list of trains
+ *     description: Returns available trains in the Kizuna Rail database, sorted alphabetically by name.
  *     tags:
  *       - Trains
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: The page number to retrieve.
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: The maximum number of trains returned per page.
  *     responses:
  *       '200':
- *         description: Successfully retrieved train data.
+ *         description: Successfully retrieved train data. Pages beyond the available records return an empty trains array.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
+ *               type: object
+ *               properties:
+ *                 trains:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       operator:
+ *                         type: string
+ *                       imageUrl:
+ *                         type: string
+ *                       imageAlt:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                       maxSpeedKmh:
+ *                         type: integer
+ *                       capacity:
+ *                         type: integer
+ *                       powerSource:
+ *                         type: string
+ *                       bestFor:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 14
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 2
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPreviousPage:
+ *                       type: boolean
+ *                       example: false
+ *       '400':
+ *         description: Invalid pagination parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Page and limit must be positive integers.
  *       '500':
  *         description: Internal server error.
  */

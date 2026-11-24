@@ -11,7 +11,34 @@
     <div class="trains-state" id="trains-loading">Loading trains...</div>
     <div class="trains-state trains-error" id="trains-error" hidden></div>
 
+    <p class="trains-results-summary"
+       id="trains-results-summary"
+       aria-live="polite"></p>
+
     <div class="trains-grid" id="trains-list"></div>
+
+    <div class="trains-state" id="trains-empty" hidden>
+        No trains found.
+    </div>
+
+    <nav class="trains-pagination"
+         id="trains-pagination"
+         aria-label="Train catalog pagination"
+         hidden>
+
+        <button type="button" id="trains-prev" disabled>
+            Previous
+        </button>
+
+        <span id="trains-page-info" aria-live="polite">
+            Page 1 of 1
+        </span>
+
+        <button type="button" id="trains-next" disabled>
+            Next
+        </button>
+
+    </nav>
 
     <template id="train-card-template">
         <article class="train-card">
@@ -52,5 +79,7 @@
         </article>
     </template>
 </section>
+
+<script src="/js/trains.js" defer></script>
 
 <%- include('./partials/footer') %>
