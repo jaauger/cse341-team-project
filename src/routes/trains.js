@@ -29,10 +29,10 @@ const trainsApi = async (req, res, next) => {
             page < 1 ||
             !Number.isSafeInteger(limit) ||
             limit < 1 ||
-            limit > 100
+            limit > 50
         ) {
             return res.status(400).json({
-                error: 'Page must be a positive integer and limit must be between 1 and 100.'
+                error: 'Page must be a positive integer and limit must be between 1 and 50.'
             });
         }
 

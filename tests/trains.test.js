@@ -79,6 +79,17 @@ describe('GET /api/trains', () => {
     });
   });
 
+  test.each([49, 50])(
+    'accepts a valid pagination limit of %i',
+    async (limit) => {
+      const response = await request(app)
+        .get(`/api/trains?limit=${limit}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination.itemsPerPage).toBe(limit);
+    }
+  );
+
   test('returns different trains on consecutive pages', async () => {
     const firstPage = await request(app)
       .get('/api/trains?page=1&limit=2');
@@ -135,6 +146,8 @@ describe('GET /api/trains', () => {
     'limit=-1',
     'limit=1.5',
     'limit=abc',
+    'limit=51',
+    'limit=100',
     'limit=101',
     'limit=',
     'limit=1e1',

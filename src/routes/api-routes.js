@@ -64,7 +64,7 @@ const router = Router();
  *         schema:
  *           type: integer
  *           minimum: 1
- *           maximum: 100
+ *           maximum: 50
  *           default: 10
  *         description: The maximum number of trains returned per page.
  *     responses:
