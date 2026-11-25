@@ -34,7 +34,7 @@ const trainsApi = async (req, res, next) => {
             limit > MAX_LIMIT
         ) {
             return res.status(400).json({
-                error: 'Page must be a positive integer and limit must be between 1 and 50.'
+                error: `Page must be a positive integer and limit must be between 1 and ${MAX_LIMIT}.`
             });
         }
 

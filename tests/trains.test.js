@@ -90,6 +90,16 @@ describe('GET /api/trains', () => {
     }
   );
 
+  test('returns the correct error message when the limit exceeds 50', async () => {
+    const response = await request(app)
+      .get('/api/trains?limit=51');
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe(
+      'Page must be a positive integer and limit must be between 1 and 50.'
+    );
+  });
+
   test('returns different trains on consecutive pages', async () => {
     const firstPage = await request(app)
       .get('/api/trains?page=1&limit=2');
