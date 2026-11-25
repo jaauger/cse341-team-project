@@ -1,5 +1,7 @@
 import { getDb } from '../db/connect.js';
 
+const MAX_LIMIT = 50;
+
 const trainsPage = (req, res) => {
     res.render('trains', { title: 'Trains' });
 };
@@ -29,7 +31,7 @@ const trainsApi = async (req, res, next) => {
             page < 1 ||
             !Number.isSafeInteger(limit) ||
             limit < 1 ||
-            limit > 50
+            limit > MAX_LIMIT
         ) {
             return res.status(400).json({
                 error: 'Page must be a positive integer and limit must be between 1 and 50.'
