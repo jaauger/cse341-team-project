@@ -408,7 +408,7 @@ router.get('/stations/:id', getStationById);
  *         schema:
  *           type: integer
  *           minimum: 1
- *           maximum: 100
+ *           maximum: 50
  *           default: 10
  *         description: The most bookings to return on one page.
  *     responses:

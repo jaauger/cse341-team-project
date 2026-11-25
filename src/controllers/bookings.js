@@ -35,7 +35,7 @@ const VALID_DAYS = [
 /*
  * PLAIN ENGLISH: The paging rules for the bookings list.
  * LOGIC: Page 1 and 10 per page are used when the request does not say.
- *   No one can ask for more than 100 bookings at once.
+ *   No one can ask for more than 50 bookings at once.
  * WHY WE NEED IT: Week 5 Feature Set 3 (issue #35) asks for the list to come
  *   10 at a time. These match Jason's Train Pagination (PR #31) so every
  *   list in our API follows the same rules.
@@ -45,7 +45,7 @@ const VALID_DAYS = [
  */
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
-const MAX_LIMIT = 100;
+const MAX_LIMIT = 50;
 
 /*
  * PLAIN ENGLISH: Check that a value is real text, not empty or just spaces.
@@ -82,7 +82,7 @@ function isPositiveWholeNumberText(value) {
  * PLAIN ENGLISH: Read page and limit from the web address, check them, and
  *   work out how many bookings to skip.
  * LOGIC: Use the defaults if they are missing. If either one is not a
- *   positive whole number, or limit is over 100, return { error }.
+ *   positive whole number, or limit is over 50, return { error }.
  *   Otherwise, return { page, limit, skip }. skip = (page - 1) * limit, so
  *   page 1 skips 0, page 2 skips 10, page 3 skips 20.
  * WHY WE NEED IT: Issue #35 says bad page or limit values must get a clear
