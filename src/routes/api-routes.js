@@ -389,54 +389,123 @@ router.get('/stations/:id', getStationById);
  * @openapi
  * /bookings:
  *   get:
- *     summary: Get bookings for the logged-in user
- *     description: Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Newest first. The Bookings Admin page uses this to fill in its list.
+ *     summary: Get one page of bookings for the logged-in user
+ *     description: Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Sorted by booking date, newest first. Returns one page at a time, plus page info. The Bookings Admin page uses this to fill in its list.
  *     tags:
  *       - Bookings
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: The page number to get.
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: The most bookings to return on one page.
  *     responses:
  *       '200':
- *         description: Successfully retrieved bookings. The list can be empty.
+ *         description: Successfully retrieved one page of bookings. A page past the end returns an empty bookings list.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                     description: The confirmation code.
- *                   scheduleId:
- *                     type: number
- *                   tripId:
- *                     type: string
- *                   ticketClass:
- *                     type: string
- *                   selectedDay:
- *                     type: string
- *                   passengers:
- *                     type: array
- *                     items:
- *                       type: object
- *                       properties:
- *                         firstName:
- *                           type: string
- *                         lastName:
- *                           type: string
- *                         email:
- *                           type: string
- *                         phone:
- *                           type: string
- *                   createdAt:
- *                     type: string
- *                     format: date-time
- *                   updatedAt:
- *                     type: string
- *                     format: date-time
+ *               type: object
+ *               properties:
+ *                 bookings:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         description: The confirmation code.
+ *                       scheduleId:
+ *                         type: number
+ *                       tripId:
+ *                         type: string
+ *                       ticketClass:
+ *                         type: string
+ *                       selectedDay:
+ *                         type: string
+ *                       passengers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             firstName:
+ *                               type: string
+ *                             lastName:
+ *                               type: string
+ *                             email:
+ *                               type: string
+ *                             phone:
+ *                               type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 13
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 2
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPreviousPage:
+ *                       type: boolean
+ *                       example: false
+ *       '400':
+ *         description: Invalid page or limit.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Page and limit must be positive integers.
  *       '401':
  *         description: Not logged in.
  *       '500':
  *         description: Internal server error.
+ */
+/*
+ * PLAIN ENGLISH: The address the Booking Admin page calls to get ONE PAGE
+ *   of bookings for whoever is logged in.
+ * LOGIC: requireApiLogin runs first and sends 401 if nobody is logged in.
+ *   Then getAllBookings reads page and limit, sends 400 if they are bad,
+ *   and sends back { bookings, pagination }.
+ * WHY WE NEED IT: Bookings (issue #16) created /api/bookings. Feature Set 4
+ *   (issue #19) made each person see the right list. Week 5 (issue #35)
+ *   adds paging, 10 at a time, sorted by booking date.
+ * LEARNING GAP: The @openapi notes above are only comments. They do not
+ *   change how the code runs. npm run swagger reads them and rebuilds
+ *   swagger.json, which is what the /api-docs page shows.
+ *   This file only writes '/bookings'. The '/api' in front is added by
+ *   src/routes/router.js.
+ * DATA COMES FROM: getAllBookings in src/controllers/bookings.js, which
+ *   gets one page from getPaginatedBookings in src/models/bookings.js.
  */
 // Bookings API
 router.get('/bookings', requireApiLogin, getAllBookings);
@@ -537,6 +606,20 @@ router.get('/bookings', requireApiLogin, getAllBookings);
  *         description: No booking with that id.
  *       '500':
  *         description: Internal server error.
+ */
+/*
+ * PLAIN ENGLISH: The addresses for editing and deleting one booking.
+ * LOGIC: Both use the booking's confirmation code in the URL (:id).
+ *   requireApiLogin runs first and sends 401 if nobody is logged in.
+ *   Then updateBooking or deleteBooking checks that the booking exists
+ *   (404) and that the user is an admin or a passenger (403).
+ * WHY WE NEED IT: Feature Set 4 (issue #19) asks for the ability to update
+ *   and delete bookings through the API, secured for passengers and admins.
+ * LEARNING GAP: PUT means "replace these fields with new values" and DELETE
+ *   means "remove this one." The same address (/bookings/:id) does two
+ *   different jobs depending on the method.
+ * DATA COMES FROM: req.params.id (the code in the URL), req.body (the edit
+ *   form, for PUT), and req.user (the login session).
  */
 router.put('/bookings/:id', requireApiLogin, updateBooking);
 router.delete('/bookings/:id', requireApiLogin, deleteBooking);
