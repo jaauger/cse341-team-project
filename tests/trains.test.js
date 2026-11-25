@@ -48,4 +48,128 @@ describe('GET /api/trains', () => {
       ])
     );
   });
+
+    test('returns default pagination metadata', async () => {
+    const response = await request(app).get('/api/trains');
+
+    expect(response.status).toBe(200);
+    expect(response.body.pagination).toEqual({
+      totalItems: 4,
+      totalPages: 1,
+      currentPage: 1,
+      itemsPerPage: 10,
+      hasNextPage: false,
+      hasPreviousPage: false
+    });
+  });
+
+  test('returns the requested number of trains per page', async () => {
+    const response = await request(app)
+      .get('/api/trains?page=1&limit=2');
+
+    expect(response.status).toBe(200);
+    expect(response.body.trains).toHaveLength(2);
+    expect(response.body.pagination).toEqual({
+      totalItems: 4,
+      totalPages: 2,
+      currentPage: 1,
+      itemsPerPage: 2,
+      hasNextPage: true,
+      hasPreviousPage: false
+    });
+  });
+
+  test.each([49, 50])(
+    'accepts a valid pagination limit of %i',
+    async (limit) => {
+      const response = await request(app)
+        .get(`/api/trains?limit=${limit}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination.itemsPerPage).toBe(limit);
+    }
+  );
+
+  test('returns the correct error message when the limit exceeds 50', async () => {
+    const response = await request(app)
+      .get('/api/trains?limit=51');
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe(
+      'Page must be a positive integer and limit must be between 1 and 50.'
+    );
+  });
+
+  test('returns different trains on consecutive pages', async () => {
+    const firstPage = await request(app)
+      .get('/api/trains?page=1&limit=2');
+
+    const secondPage = await request(app)
+      .get('/api/trains?page=2&limit=2');
+
+    expect(firstPage.status).toBe(200);
+    expect(secondPage.status).toBe(200);
+
+    expect(firstPage.body.trains).toHaveLength(2);
+    expect(secondPage.body.trains).toHaveLength(2);
+
+    const firstPageIds = firstPage.body.trains.map(train => train.id);
+    const secondPageIds = secondPage.body.trains.map(train => train.id);
+
+    expect(
+      firstPageIds.some(id => secondPageIds.includes(id))
+    ).toBe(false);
+
+    expect(secondPage.body.pagination).toEqual({
+      totalItems: 4,
+      totalPages: 2,
+      currentPage: 2,
+      itemsPerPage: 2,
+      hasNextPage: false,
+      hasPreviousPage: true
+    });
+  });
+
+  test('returns an empty array when the requested page exceeds available pages', async () => {
+    const response = await request(app)
+      .get('/api/trains?page=3&limit=2');
+
+    expect(response.status).toBe(200);
+    expect(response.body.trains).toHaveLength(0);
+    expect(response.body.pagination.currentPage).toBe(3);
+    expect(response.body.pagination.totalItems).toBe(4);
+    expect(response.body.pagination.hasNextPage).toBe(false);
+  });
+
+    test.each([
+    'page=0',
+    'page=-1',
+    'page=1.5',
+    'page=abc',
+    'page=',
+    'page=1e2',
+    'page=0x10',
+    'page=2.0',
+    'page=1&page=2',
+    'page=9007199254740992',
+    'limit=0',
+    'limit=-1',
+    'limit=1.5',
+    'limit=abc',
+    'limit=51',
+    'limit=100',
+    'limit=101',
+    'limit=',
+    'limit=1e1',
+    'limit=0xA',
+    'limit=2.0',
+    'limit=1&limit=2'
+  ])
+  ('rejects invalid pagination parameter: %s', async (query) => {
+    const response = await request(app)
+      .get(`/api/trains?${query}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('error');
+  });
 });

@@ -20,6 +20,48 @@
 .trains-catalog {
     display: block;
 
+
+    /* Train catalog results summary */
+    .trains-results-summary {
+        margin: var(--space-md) 0;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        color: var(--clr-text-secondary);
+    }
+
+    /* Train catalog pagination */
+    .trains-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--space-md);
+        margin: var(--space-xl) 0;
+
+        &[hidden] {
+            display: none;
+        }
+
+        button {
+            min-width: 100px;
+            padding: var(--space-sm) var(--space-md);
+            cursor: pointer;
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        }
+
+        #trains-page-info {
+            min-width: 100px;
+            text-align: center;
+            font-weight: 500;
+            color: var(--clr-text-primary);
+        }
+    }
+
+
     .trains-state {
         margin-bottom: var(--space-md);
         color: var(--clr-text-secondary);
