@@ -3,19 +3,22 @@
 <%#
  * PLAIN ENGLISH: The Bookings Admin page. Admins see every booking. Everyone
  *   else who is logged in sees only the bookings where they are a passenger.
- *   Each booking can be edited or deleted from here.
+ *   Each booking can be edited or deleted from here. Bookings show 10 at a
+ *   time, with Previous and Next buttons.
  * LOGIC: This page opens EMPTY. It shows "Loading bookings..." first. Then
- *   public/js/bookings-admin.js calls /api/bookings, copies the hidden
- *   template once per booking, fills it in, and shows the list. The Edit and
- *   Delete buttons call PUT and DELETE /api/bookings/:id.
+ *   public/js/bookings-admin.js calls /api/bookings?page=1&limit=10, copies
+ *   the hidden template once per booking, fills it in, and shows the list.
+ *   The Edit and Delete buttons call PUT and DELETE /api/bookings/:id. The
+ *   Previous and Next buttons ask the API for another page.
  * WHY WE NEED IT: The Bookings feature (issue #16) created this page.
  *   Feature Set 4 (issue #19) adds login protection, the right list for each
- *   user, and the ability to update and delete bookings.
+ *   user, and the ability to update and delete bookings. Week 5 (issue #35)
+ *   adds paging, 10 at a time, sorted by booking date.
  * LEARNING GAP: There is no forEach loop over bookings in this file. That is
  *   on purpose. It follows the trains page (src/views/trains.ejs).
  *   Who may open this page is decided by the route lock in
- *   src/routes/ejs-routes.js. Which bookings appear is decided by the
- *   server, not by this page.
+ *   src/routes/ejs-routes.js. Which bookings appear, and which page, is
+ *   decided by the server, not by this page.
  *   These notes are EJS comments, so they never show up in the browser.
  *   An EJS comment cannot contain the EJS closing tag as plain text,
  *   because EJS would think the comment ends there.
@@ -26,7 +29,7 @@
     <h1>Bookings Admin</h1>
     <p>
         Admins see every booking. Everyone else sees the bookings where they
-        are a passenger. Newest bookings are first.
+        are a passenger. Newest bookings are first, 10 per page.
     </p>
 </section>
 
@@ -46,6 +49,25 @@
     <div class="bookings-state" id="bookings-message" aria-live="polite" hidden></div>
 
     <div class="bookings-grid" id="bookings-list"></div>
+
+    <%#
+     * PLAIN ENGLISH: The page bar under the list: Previous, "Page X of Y,"
+     *   and Next.
+     * LOGIC: It starts hidden. After the first page loads, the JavaScript
+     *   shows it, writes the page words, and turns each button off when
+     *   there is no page in that direction.
+     * WHY WE NEED IT: Week 5 (issue #35) asks for pagination controls that
+     *   step through the bookings 10 at a time.
+     * LEARNING GAP: nav with aria-label tells screen readers "this is the
+     *   page bar for bookings." The buttons reuse the booking-button style,
+     *   so they match the Edit and Delete buttons with no new CSS.
+     *   A disabled button cannot be clicked, so no one can ask for page 0.
+    %>
+    <nav class="bookings-pagination" id="bookings-pagination" aria-label="Bookings pages" hidden>
+        <button type="button" class="booking-button" id="bookings-prev">Previous</button>
+        <span id="bookings-page-info" aria-live="polite"></span>
+        <button type="button" class="booking-button" id="bookings-next">Next</button>
+    </nav>
 
     <%#
      * PLAIN ENGLISH: The hidden pattern for one booking card.
