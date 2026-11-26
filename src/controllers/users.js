@@ -105,7 +105,7 @@ const deleteUser = async (req, res) => {
 };
 
 const getUsersPage = (req, res) => {
-    return res.render('admin', {
+    return res.render('users-admin', {
         title: 'User Management',
         isAdmin: req.user.role === 'admin'
     });
