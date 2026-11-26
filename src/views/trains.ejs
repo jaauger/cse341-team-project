@@ -8,6 +8,63 @@
 </section>
 
 <section class="trains-catalog">
+
+        <form class="trains-controls" id="trains-controls">
+
+        <div class="trains-control-group trains-search-group">
+            <label for="trains-search">Search Trains</label>
+            <input
+                type="search"
+                id="trains-search"
+                name="search"
+                placeholder="Search by name, operator, type..."
+                autocomplete="off">
+        </div>
+
+        <div class="trains-control-group">
+            <label for="trains-type">Train Type</label>
+            <select id="trains-type" name="type">
+                <option value="">All Types</option>
+            </select>
+        </div>
+
+        <div class="trains-control-group">
+            <label for="trains-power-source">Power Source</label>
+            <select id="trains-power-source" name="powerSource">
+                <option value="">All Power Sources</option>
+            </select>
+        </div>
+
+        <div class="trains-control-group">
+            <label for="trains-sort-by">Sort By</label>
+            <select id="trains-sort-by" name="sortBy">
+                <option value="name">Train Name</option>
+                <option value="operator">Operator</option>
+                <option value="maxSpeedKmh">Maximum Speed</option>
+                <option value="capacity">Passenger Capacity</option>
+            </select>
+        </div>
+
+        <div class="trains-control-group">
+            <label for="trains-sort-order">Sort Order</label>
+            <select id="trains-sort-order" name="sortOrder">
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+            </select>
+        </div>
+
+        <div class="trains-control-actions">
+            <button type="submit" id="trains-apply">
+                Apply
+            </button>
+
+            <button type="reset" id="trains-reset">
+                Reset
+            </button>
+        </div>
+
+    </form>
+
     <div class="trains-state" id="trains-loading">Loading trains...</div>
     <div class="trains-state trains-error" id="trains-error" hidden></div>
 
@@ -18,7 +75,8 @@
     <div class="trains-grid" id="trains-list"></div>
 
     <div class="trains-state" id="trains-empty" hidden>
-        No trains found.
+        No trains match your search or filter criteria.
+        Try adjusting your selections.
     </div>
 
     <nav class="trains-pagination"

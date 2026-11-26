@@ -21,6 +21,95 @@
     display: block;
 
 
+        /* Train catalog search, filter, and sorting controls */
+        .trains-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: var(--space-md);
+            margin: var(--space-lg) 0;
+            padding: var(--space-lg);
+            border: 1px solid #b7c4e8;
+            border-radius: var(--radius-lg);
+            background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
+            box-shadow: var(--shadow-sm);
+
+            .trains-control-group {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-xs);
+                min-width: 0;
+
+                label {
+                    font-size: var(--font-size-sm);
+                    font-weight: 600;
+                    color: var(--clr-text-primary);
+                }
+
+                input,
+                select {
+                    box-sizing: border-box;
+                    width: 100%;
+                    min-width: 0;
+                    min-height: 42px;
+                    padding: var(--space-sm) var(--space-md);
+                    border: 1px solid #b7c4e8;
+                    border-radius: var(--radius-sm);
+                    background-color: #ffffff;
+                    color: var(--clr-text-primary);
+                    font-family: inherit;
+                    font-size: var(--font-size-sm);
+
+                    &:focus {
+                        outline: 2px solid var(--clr-primary);
+                        outline-offset: 1px;
+                    }
+
+                    &:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                    }
+                }
+            }
+
+            .trains-control-actions {
+                display: flex;
+                align-items: flex-end;
+                gap: var(--space-sm);
+
+                button {
+                    flex: 1;
+                    min-height: 42px;
+                    padding: var(--space-sm) var(--space-md);
+                    border-radius: var(--radius-sm);
+                    font-family: inherit;
+                    font-size: var(--font-size-sm);
+                    font-weight: 600;
+                    cursor: pointer;
+                }
+
+                #trains-apply {
+                    background-color: var(--clr-primary);
+                    color: #ffffff;
+                    border: 1px solid var(--clr-primary);
+
+                    &:hover {
+                        filter: brightness(0.9);
+                    }
+                }
+
+                #trains-reset {
+                    background-color: #ffffff;
+                    color: var(--clr-text-primary);
+                    border: 1px solid #b7c4e8;
+
+                    &:hover {
+                        background-color: #eef3ff;
+                    }
+                }
+            }
+        }
+
+
     /* Train catalog results summary */
     .trains-results-summary {
         margin: var(--space-md) 0;
@@ -165,8 +254,42 @@
 
 @media (min-width: 768px) {
     .trains-catalog {
+        .trains-controls {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+
+            .trains-search-group {
+                grid-column: 1 / -1;
+            }
+
+            .trains-control-actions {
+                grid-column: 1 / -1;
+                justify-content: flex-end;
+
+                button {
+                    flex: 0 1 auto;
+                    min-width: 100px;
+                }
+            }
+        }
+
         .trains-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+}
+
+@media (min-width: 1024px) {
+    .trains-catalog {
+        .trains-controls {
+            grid-template-columns: 2fr 1fr 1fr;
+
+            .trains-search-group {
+                grid-column: auto;
+            }
+
+            .trains-control-actions {
+                grid-column: auto;
+            }
         }
     }
 }

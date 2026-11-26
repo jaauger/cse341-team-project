@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { trainsApi } from './trains.js';
+import { trainsApi, trainsFiltersApi } from './trains.js';
 import {
     getAllTicketClasses,
     getTicketClassesForDay,
@@ -45,8 +45,12 @@ const router = Router();
  * @openapi
  * /trains:
  *   get:
- *     summary: Get a paginated list of trains
- *     description: Returns available trains in the Kizuna Rail database, sorted alphabetically by name.
+ *     summary: Search, filter, sort, and paginate trains
+ *     description: >
+ *       Returns available trains in the Kizuna Rail database.
+ *       Supports case-insensitive keyword searching, exact-match filters,
+ *       sorting, and pagination. Search and filter criteria can be combined.
+ *       Results are sorted alphabetically by name unless otherwise specified.
  *     tags:
  *       - Trains
  *     parameters:
@@ -67,9 +71,61 @@ const router = Router();
  *           maximum: 50
  *           default: 10
  *         description: The maximum number of trains returned per page.
+ *       - in: query
+ *         name: search
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: >
+ *           Case-insensitive literal keyword search across train name,
+ *           operator, type, and description.
+ *         example: express
+ *       - in: query
+ *         name: type
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: >
+ *           Case-insensitive exact match for train type.
+ *           Available values can be retrieved from the trains filters endpoint.
+ *         example: Limited Express
+ *       - in: query
+ *         name: powerSource
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: >
+ *           Case-insensitive exact match for power source.
+ *           Available values can be retrieved from the trains filters endpoint.
+ *         example: Electric
+ *       - in: query
+ *         name: sortBy
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - name
+ *             - operator
+ *             - maxSpeedKmh
+ *             - capacity
+ *           default: name
+ *         description: The train property used to sort the results.
+ *       - in: query
+ *         name: sortOrder
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - asc
+ *             - desc
+ *           default: asc
+ *         description: The direction in which results are sorted.
  *     responses:
  *       '200':
- *         description: Successfully retrieved train data. Pages beyond the available records return an empty trains array.
+ *         description: >
+ *           Successfully retrieved train data, pagination metadata,
+ *           and applied query criteria. Searches with no matching records
+ *           or pages beyond the available records return an empty trains array.
  *         content:
  *           application/json:
  *             schema:
@@ -109,6 +165,7 @@ const router = Router();
  *                   properties:
  *                     totalItems:
  *                       type: integer
+ *                       description: Total number of trains matching the applied criteria.
  *                       example: 14
  *                     totalPages:
  *                       type: integer
@@ -125,8 +182,42 @@ const router = Router();
  *                     hasPreviousPage:
  *                       type: boolean
  *                       example: false
+ *                 query:
+ *                   type: object
+ *                   properties:
+ *                     search:
+ *                       type: string
+ *                       description: The applied search keyword, or an empty string.
+ *                       example: ''
+ *                     filters:
+ *                       type: object
+ *                       properties:
+ *                         type:
+ *                           type: string
+ *                           nullable: true
+ *                           description: The applied train type filter, or null.
+ *                           example: null
+ *                         powerSource:
+ *                           type: string
+ *                           nullable: true
+ *                           description: The applied power source filter, or null.
+ *                           example: null
+ *                     sortBy:
+ *                       type: string
+ *                       enum:
+ *                         - name
+ *                         - operator
+ *                         - maxSpeedKmh
+ *                         - capacity
+ *                       example: name
+ *                     sortOrder:
+ *                       type: string
+ *                       enum:
+ *                         - asc
+ *                         - desc
+ *                       example: asc
  *       '400':
- *         description: Invalid pagination parameters.
+ *         description: Invalid pagination, search, filter, or sorting parameters.
  *         content:
  *           application/json:
  *             schema:
@@ -134,12 +225,80 @@ const router = Router();
  *               properties:
  *                 error:
  *                   type: string
- *                   example: Page and limit must be positive integers.
+ *                 allowedFields:
+ *                   type: array
+ *                   description: Returned when an invalid sorting field is requested.
+ *                   items:
+ *                     type: string
+ *             examples:
+ *               invalidPagination:
+ *                 summary: Invalid pagination parameters
+ *                 value:
+ *                   error: Page and limit must be positive integers.
+ *               invalidSortField:
+ *                 summary: Unsupported sorting field
+ *                 value:
+ *                   error: Invalid sort field.
+ *                   allowedFields:
+ *                     - name
+ *                     - operator
+ *                     - maxSpeedKmh
+ *                     - capacity
+ *               invalidSortOrder:
+ *                 summary: Unsupported sorting direction
+ *                 value:
+ *                   error: Sort order must be asc or desc.
+ *               invalidFilter:
+ *                 summary: Invalid search or filter parameter
+ *                 value:
+ *                   error: Search and filter parameters must be strings.
  *       '500':
  *         description: Internal server error.
  */
 // Trains API
 router.get('/trains', trainsApi);
+
+/**
+ * @openapi
+ * /trains/filters:
+ *   get:
+ *     summary: Get available train filter options
+ *     description: >
+ *       Returns distinct train types and power sources from the database.
+ *       Values are returned alphabetically, excluding missing, empty,
+ *       and non-string values. Used to dynamically populate the train
+ *       catalog filter controls.
+ *     tags:
+ *       - Trains
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved available filter options.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 types:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example:
+ *                     - Limited Express
+ *                     - Mountain Railway
+ *                     - Steam Excursion
+ *                 powerSources:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example:
+ *                     - Diesel
+ *                     - Electric
+ *                     - Hybrid
+ *                     - Steam
+ *       '500':
+ *         description: Internal server error.
+ */
+router.get('/trains/filters', trainsFiltersApi);
 
 /**
  * @openapi
@@ -420,7 +579,9 @@ router.get('/trips', getAllTrips);
  *         description: Internal server error.
  */
 router.get('/trips/:id', getTripById);
+
 router.put('/trips/:id', requireApiRole('admin'), updateTrip);
+
 router.delete('/trips/:id', requireApiRole('admin'), deleteTrip);
 
 /**
@@ -616,6 +777,7 @@ router.get('/bookings', requireApiLogin, getAllBookings);
  *         description: Internal server error.
  */
 router.put('/bookings/:id', requireApiLogin, updateBooking);
+
 router.delete('/bookings/:id', requireApiLogin, deleteBooking);
 
 /**
