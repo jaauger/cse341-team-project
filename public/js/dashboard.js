@@ -8,8 +8,8 @@ function displayBooking(booking) {
     const passengerCount = booking.passengers.length;
 
     card.textContent =
-    `Booking: ${booking.id} | Day: ${booking.selectedDay} | Ticket: ${booking.ticketClass} | Passengers: ${passengerCount}`;
-    
+        `Booking: ${booking.id} | Day: ${booking.selectedDay} | Ticket: ${booking.ticketClass} | Passengers: ${passengerCount}`;
+
     bookingsList.appendChild(card);
 }
 
@@ -25,16 +25,30 @@ async function loadBookings() {
             return;
         }
 
-        const bookings = await response.json();
+        const data = await response.json();
+        const bookings = Array.isArray(data)
+            ? data
+            : data.bookings;
+
+        if (!Array.isArray(bookings)) {
+            throw new Error('Invalid bookings response.');
+        }
+
+        const totalItems = data.pagination
+            ? data.pagination.totalItems
+            : bookings.length;
 
         bookingsList.replaceChildren();
         bookings.forEach(displayBooking);
 
-        if (bookings.length === 0) {
+        if (totalItems === 0) {
             bookingsStatus.textContent = 'No bookings yet.';
+        } else if (bookings.length < totalItems) {
+            bookingsStatus.textContent =
+                `Showing ${bookings.length} of ${totalItems} bookings.`;
         } else {
             bookingsStatus.textContent =
-                `Found ${bookings.length} booking(s).`;
+                `Found ${totalItems} booking(s).`;
         }
     } catch (error) {
         console.error('Failed to load bookings:', error);
