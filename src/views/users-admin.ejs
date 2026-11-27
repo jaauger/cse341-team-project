@@ -2,10 +2,20 @@
 
 <section class="users-hero" id="users-page" data-is-admin="<%= isAdmin ? 'true' : 'false' %>">
     <h1>User Management</h1>
-    <p>View account information and manage user roles.</p>
+    <p>View account information and manage user.</p>
 </section>
 
 <section class="users-catalog">
+    <% if (isAdmin) { %>
+        <div class="users-controls">
+            <label for="users-sort-order">Sort usernames</label>
+            <select id="users-sort-order" name="sortOrder">
+                <option value="asc">A to Z</option>
+                <option value="desc">Z to A</option>
+            </select>
+        </div>
+    <% } %>
+
     <div class="users-state" id="users-loading" aria-live="polite">
         Loading users...
     </div>
@@ -15,7 +25,26 @@
         No users found.
     </div>
 
+    <p class="users-results-summary" id="users-results-summary" aria-live="polite" hidden></p>
+
     <div class="users-grid" id="users-list"></div>
+
+    <nav class="users-pagination"
+         id="users-pagination"
+         aria-label="User list pagination"
+         hidden>
+        <button type="button" id="users-prev" disabled>
+            Previous
+        </button>
+
+        <span id="users-page-info" aria-live="polite">
+            Page 1 of 1
+        </span>
+
+        <button type="button" id="users-next" disabled>
+            Next
+        </button>
+    </nav>
 
     <template id="user-card-template">
         <article class="user-card">

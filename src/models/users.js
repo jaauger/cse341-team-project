@@ -17,6 +17,19 @@ const getUsers = async () => {
         .populate('role');
 };
 
+const getPaginatedUsers = async ({ skip, limit, sortDirection }) => {
+    return await User.find({})
+        .collation({ locale: 'en', strength: 2 })
+        .sort({ username: sortDirection, _id: 1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('role');
+};
+
+const countUsers = async () => {
+    return await User.countDocuments({});
+};
+
 const getUserById = async (id) => {
     return await User.findById(id)
         .populate('role');
@@ -50,6 +63,7 @@ const verifyPassword = async (password, passwordHash) => {
 };
 
 export { createUser, findUserByEmail,
-         getUsers, getUserById, updateUserRole, deleteUser,
+         getUsers, getPaginatedUsers, countUsers,
+         getUserById, updateUserRole, deleteUser,
          hashPassword, verifyPassword
  };
