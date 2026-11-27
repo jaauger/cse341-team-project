@@ -4,9 +4,9 @@ import { generateConfirmationCode } from "../includes/helpers.js";
 import { getAllTicketClasses } from "../models/ticket-classes.js";
 import {
   createBooking,
-  getAllBookings as findAllBookings,
   getBookingById,
-  getBookingsByPassengerEmail,
+  getPaginatedBookings,
+  buildPassengerEmailFilter,
   updateBookingById,
   deleteBookingById,
   getUserEmailById,
@@ -33,6 +33,21 @@ const VALID_DAYS = [
 ];
 
 /*
+ * PLAIN ENGLISH: The paging rules for the bookings list.
+ * LOGIC: Page 1 and 10 per page are used when the request does not say.
+ *   No one can ask for more than 50 bookings at once.
+ * WHY WE NEED IT: Week 5 Feature Set 3 (issue #35) asks for the list to come
+ *   10 at a time. These match Jason's Train Pagination (PR #31) so every
+ *   list in our API follows the same rules.
+ * LEARNING GAP: The maximum protects the database. Without it, someone could
+ *   ask for limit=100000 and make the server do a lot of work at once.
+ * DATA COMES FROM: Written here in the code, agreed on with the team.
+ */
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 50;
+
+/*
  * PLAIN ENGLISH: Check that a value is real text, not empty or just spaces.
  * LOGIC: It must be a string, and after trim() removes the spaces at the
  *   start and end, it must still have at least one character.
@@ -44,6 +59,97 @@ const VALID_DAYS = [
  */
 function isNonEmptyText(value) {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+/*
+ * PLAIN ENGLISH: Is this text a whole number of 1 or more, like "1" or
+ *   "25"?
+ * LOGIC: The pattern /^[1-9]\d*$/ means "starts with 1 to 9, then only
+ *   digits, and nothing else." So "0", "-1", "1.5", "abc", and "" all fail.
+ * WHY WE NEED IT: page and limit must be positive whole numbers. This is the
+ *   same check Jason uses in Train Pagination (PR #31).
+ * LEARNING GAP: Everything in a web address arrives as TEXT, even numbers.
+ *   ?page=2 arrives as "2". We check the text first, then turn it into a
+ *   number. typeof value === "string" also catches ?page=1&page=2, which
+ *   Express turns into a list instead of text.
+ * DATA COMES FROM: req.query.page and req.query.limit.
+ */
+function isPositiveWholeNumberText(value) {
+  return typeof value === "string" && /^[1-9]\d*$/.test(value);
+}
+
+/*
+ * PLAIN ENGLISH: Read page and limit from the web address, check them, and
+ *   work out how many bookings to skip.
+ * LOGIC: Use the defaults if they are missing. If either one is not a
+ *   positive whole number, or limit is over 50, return { error }.
+ *   Otherwise, return { page, limit, skip }. skip = (page - 1) * limit, so
+ *   page 1 skips 0, page 2 skips 10, page 3 skips 20.
+ * WHY WE NEED IT: Issue #35 says bad page or limit values must get a clear
+ *   400 answer instead of a broken database search.
+ * LEARNING GAP: This returns a result instead of sending the response
+ *   itself, the same idea as buildBookingUpdate below. The controller
+ *   decides what to send. The error messages match Jason's word for word,
+ *   so the whole API sounds the same.
+ *   Number.isSafeInteger catches numbers too big for JavaScript to count
+ *   exactly, like page=99999999999999999999.
+ * DATA COMES FROM: req.query (the part of the web address after the "?").
+ */
+function readPagination(query) {
+  const pageText = query.page ?? String(DEFAULT_PAGE);
+  const limitText = query.limit ?? String(DEFAULT_LIMIT);
+
+  if (!isPositiveWholeNumberText(pageText) || !isPositiveWholeNumberText(limitText)) {
+    return { error: "Page and limit must be positive integers." };
+  }
+
+  const page = Number(pageText);
+  const limit = Number(limitText);
+
+  if (!Number.isSafeInteger(page) || !Number.isSafeInteger(limit) || limit > MAX_LIMIT) {
+    return {
+      error: `Page must be a positive integer and limit must be between 1 and ${MAX_LIMIT}.`,
+    };
+  }
+
+  const skip = (page - 1) * limit;
+
+  if (!Number.isSafeInteger(skip)) {
+    return { error: "Requested page is too large." };
+  }
+
+  return { page, limit, skip };
+}
+
+/*
+ * PLAIN ENGLISH: Build the little "info card" that goes with each page of
+ *   bookings.
+ * LOGIC: totalPages = total bookings divided by bookings per page, rounded
+ *   UP (23 bookings / 10 per page = 3 pages). hasNextPage is true if there
+ *   is a page after this one. hasPreviousPage is true if this is not
+ *   page 1 and there is at least one page.
+ * WHY WE NEED IT: The assignment asks every paged answer to include the
+ *   total count, the current page, and the items per page. The Booking
+ *   Admin page uses this card to show "Page X of Y" and to turn the
+ *   Previous and Next buttons on or off.
+ * LEARNING GAP: These names (totalItems, totalPages, currentPage,
+ *   itemsPerPage, hasNextPage, hasPreviousPage) match Jason's Train
+ *   Pagination exactly, so anyone using our API learns one pattern.
+ *   Math.ceil rounds up, because 3 leftover bookings still need a page.
+ * DATA COMES FROM: The page and limit from readPagination and the
+ *   totalItems count from getPaginatedBookings.
+ */
+function buildPaginationInfo(page, limit, totalItems) {
+  const totalPages = Math.ceil(totalItems / limit);
+
+  return {
+    totalItems,
+    totalPages,
+    currentPage: page,
+    itemsPerPage: limit,
+    hasNextPage: page < totalPages,
+    hasPreviousPage: page > 1 && totalPages > 0,
+  };
 }
 
 /*
@@ -159,42 +265,64 @@ function buildBookingUpdate(body, validClasses) {
 }
 
 /*
- * PLAIN ENGLISH: Send the list of bookings as JSON. Admins get every
- *   booking. Everyone else gets only the bookings they are a passenger on.
- * LOGIC: If req.user.role is "admin", ask the model for all bookings.
- *   Otherwise, look up the user's email by their id, then ask the model for
- *   bookings where that email is a passenger. Send status 200 and the list.
+ * PLAIN ENGLISH: Send ONE PAGE of bookings as JSON, plus an info card about
+ *   the page. Admins page through every booking. Everyone else pages
+ *   through only the bookings they are a passenger on.
+ * LOGIC: In this order:
+ *   1. Check page and limit with readPagination. Bad values → 400.
+ *   2. Build the filter note: admin = {} (all bookings), everyone else =
+ *      only bookings with their email.
+ *   3. Ask getPaginatedBookings for that page and the total count.
+ *   4. Send 200 with { bookings, pagination }.
  *   If something breaks, send status 500 and a short error.
- * WHY WE NEED IT: This answers GET /api/bookings. The Bookings Admin page
- *   calls this API to fill in its list. Feature Set 4 changed the rule from
- *   "admins only" to "everyone logged in, each sees the right list."
+ * WHY WE NEED IT: This answers GET /api/bookings. Week 5 Feature Set 3
+ *   (issue #35) asks for the Booking Admin list to come 10 at a time,
+ *   sorted by booking date, with page info. Feature Set 4's rule (each
+ *   person sees the right list) still applies.
  * LEARNING GAP: The route lock (requireApiLogin) already sent 401 to anyone
  *   not logged in, so by the time this runs, req.user always exists.
- *   An empty list [] is still a success (200), not an error.
- *   We import the model function as findAllBookings because this
- *   controller function already uses the name getAllBookings. This is the
- *   same renaming trick used in src/controllers/trains.js.
- * DATA COMES FROM: getAllBookings or getBookingsByPassengerEmail in
- *   src/models/bookings.js, which read the "bookings" collection, plus
- *   req.user from the login session.
+ *   The answer used to be a plain list [ ... ]. Now it is an object
+ *   { bookings: [...], pagination: {...} }, the same shape as Jason's
+ *   trains API. The Booking Admin page JavaScript must read .bookings now.
+ *   A page past the end, or a user with no bookings, is still a success
+ *   (200) with an empty list, not a 404.
+ * DATA COMES FROM: req.query (page and limit), req.user (the login
+ *   session), and getPaginatedBookings in src/models/bookings.js, which
+ *   reads the "bookings" collection.
  */
 export async function getAllBookings(req, res) {
   try {
-    if (req.user.role === "admin") {
-      const bookings = await findAllBookings();
+    const { error, page, limit, skip } = readPagination(req.query);
 
-      return res.status(200).json(bookings);
+    if (error) {
+      return res.status(400).json({ error });
     }
 
-    const email = await getUserEmailById(req.user.id);
+    let filter = {};
 
-    if (!email) {
-      return res.status(200).json([]);
+    if (req.user.role !== "admin") {
+      const email = await getUserEmailById(req.user.id);
+
+      if (!email) {
+        return res.status(200).json({
+          bookings: [],
+          pagination: buildPaginationInfo(page, limit, 0),
+        });
+      }
+
+      filter = buildPassengerEmailFilter(email);
     }
 
-    const bookings = await getBookingsByPassengerEmail(email);
+    const { bookings, totalItems } = await getPaginatedBookings({
+      filter,
+      skip,
+      limit,
+    });
 
-    return res.status(200).json(bookings);
+    return res.status(200).json({
+      bookings,
+      pagination: buildPaginationInfo(page, limit, totalItems),
+    });
   } catch (error) {
     console.error("Error fetching bookings:", error);
 

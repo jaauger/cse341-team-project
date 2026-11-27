@@ -14,20 +14,326 @@
   "paths": {
     "/trains": {
       "get": {
-        "summary": "Get all trains",
-        "description": "Returns the available trains in the Kizuna Rail database.",
+        "summary": "Search, filter, sort, and paginate trains",
+        "description": "Returns available trains in the Kizuna Rail database. Supports case-insensitive keyword searching, exact-match filters, sorting, and pagination. Search and filter criteria can be combined. Results are sorted alphabetically by name unless otherwise specified.\n",
+        "tags": [
+          "Trains"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "The page number to retrieve."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "The maximum number of trains returned per page."
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Case-insensitive literal keyword search across train name, operator, type, and description.\n",
+            "example": "express"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Case-insensitive exact match for train type. Available values can be retrieved from the trains filters endpoint.\n",
+            "example": "Limited Express"
+          },
+          {
+            "in": "query",
+            "name": "powerSource",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Case-insensitive exact match for power source. Available values can be retrieved from the trains filters endpoint.\n",
+            "example": "Electric"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "operator",
+                "maxSpeedKmh",
+                "capacity"
+              ],
+              "default": "name"
+            },
+            "description": "The train property used to sort the results."
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "asc"
+            },
+            "description": "The direction in which results are sorted."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved train data, pagination metadata, and applied query criteria. Searches with no matching records or pages beyond the available records return an empty trains array.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "trains": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "_id": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "operator": {
+                            "type": "string"
+                          },
+                          "imageUrl": {
+                            "type": "string"
+                          },
+                          "imageAlt": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "maxSpeedKmh": {
+                            "type": "integer"
+                          },
+                          "capacity": {
+                            "type": "integer"
+                          },
+                          "powerSource": {
+                            "type": "string"
+                          },
+                          "bestFor": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "totalItems": {
+                          "type": "integer",
+                          "description": "Total number of trains matching the applied criteria.",
+                          "example": 14
+                        },
+                        "totalPages": {
+                          "type": "integer",
+                          "example": 2
+                        },
+                        "currentPage": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "itemsPerPage": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "hasNextPage": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "hasPreviousPage": {
+                          "type": "boolean",
+                          "example": false
+                        }
+                      }
+                    },
+                    "query": {
+                      "type": "object",
+                      "properties": {
+                        "search": {
+                          "type": "string",
+                          "description": "The applied search keyword, or an empty string.",
+                          "example": ""
+                        },
+                        "filters": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "The applied train type filter, or null.",
+                              "example": null
+                            },
+                            "powerSource": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "The applied power source filter, or null.",
+                              "example": null
+                            }
+                          }
+                        },
+                        "sortBy": {
+                          "type": "string",
+                          "enum": [
+                            "name",
+                            "operator",
+                            "maxSpeedKmh",
+                            "capacity"
+                          ],
+                          "example": "name"
+                        },
+                        "sortOrder": {
+                          "type": "string",
+                          "enum": [
+                            "asc",
+                            "desc"
+                          ],
+                          "example": "asc"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination, search, filter, or sorting parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "allowedFields": {
+                      "type": "array",
+                      "description": "Returned when an invalid sorting field is requested.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "invalidPagination": {
+                    "summary": "Invalid pagination parameters",
+                    "value": {
+                      "error": "Page and limit must be positive integers."
+                    }
+                  },
+                  "invalidSortField": {
+                    "summary": "Unsupported sorting field",
+                    "value": {
+                      "error": "Invalid sort field.",
+                      "allowedFields": [
+                        "name",
+                        "operator",
+                        "maxSpeedKmh",
+                        "capacity"
+                      ]
+                    }
+                  },
+                  "invalidSortOrder": {
+                    "summary": "Unsupported sorting direction",
+                    "value": {
+                      "error": "Sort order must be asc or desc."
+                    }
+                  },
+                  "invalidFilter": {
+                    "summary": "Invalid search or filter parameter",
+                    "value": {
+                      "error": "Search and filter parameters must be strings."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
+    "/trains/filters": {
+      "get": {
+        "summary": "Get available train filter options",
+        "description": "Returns distinct train types and power sources from the database. Values are returned alphabetically, excluding missing, empty, and non-string values. Used to dynamically populate the train catalog filter controls.\n",
         "tags": [
           "Trains"
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved train data.",
+            "description": "Successfully retrieved available filter options.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "Limited Express",
+                        "Mountain Railway",
+                        "Steam Excursion"
+                      ]
+                    },
+                    "powerSources": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "Diesel",
+                        "Electric",
+                        "Hybrid",
+                        "Steam"
+                      ]
+                    }
                   }
                 }
               }
@@ -99,6 +405,43 @@
           },
           "400": {
             "description": "The day is not a valid day name."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
+    "/ticket-classes/compare": {
+      "get": {
+        "summary": "Compare ticket classes for two travel days",
+        "tags": [
+          "Ticket Classes"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "day1",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "day2",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket classes for both days."
+          },
+          "400": {
+            "description": "Invalid or missing day."
           },
           "500": {
             "description": "Internal server error."
@@ -416,65 +759,140 @@
     },
     "/bookings": {
       "get": {
-        "summary": "Get bookings for the logged-in user",
-        "description": "Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Newest first. The Bookings Admin page uses this to fill in its list.",
+        "summary": "Get one page of bookings for the logged-in user",
+        "description": "Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Sorted by booking date, newest first. Returns one page at a time, plus page info. The Bookings Admin page uses this to fill in its list.",
         "tags": [
           "Bookings"
         ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "The page number to get."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "The most bookings to return on one page."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved bookings. The list can be empty.",
+            "description": "Successfully retrieved one page of bookings. A page past the end returns an empty bookings list.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "description": "The confirmation code."
-                      },
-                      "scheduleId": {
-                        "type": "number"
-                      },
-                      "tripId": {
-                        "type": "string"
-                      },
-                      "ticketClass": {
-                        "type": "string"
-                      },
-                      "selectedDay": {
-                        "type": "string"
-                      },
-                      "passengers": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "firstName": {
-                              "type": "string"
-                            },
-                            "lastName": {
-                              "type": "string"
-                            },
-                            "email": {
-                              "type": "string"
-                            },
-                            "phone": {
-                              "type": "string"
+                  "type": "object",
+                  "properties": {
+                    "bookings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "The confirmation code."
+                          },
+                          "scheduleId": {
+                            "type": "number"
+                          },
+                          "tripId": {
+                            "type": "string"
+                          },
+                          "ticketClass": {
+                            "type": "string"
+                          },
+                          "selectedDay": {
+                            "type": "string"
+                          },
+                          "passengers": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "firstName": {
+                                  "type": "string"
+                                },
+                                "lastName": {
+                                  "type": "string"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "phone": {
+                                  "type": "string"
+                                }
+                              }
                             }
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
                           }
                         }
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "updatedAt": {
-                        "type": "string",
-                        "format": "date-time"
                       }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "totalItems": {
+                          "type": "integer",
+                          "example": 13
+                        },
+                        "totalPages": {
+                          "type": "integer",
+                          "example": 2
+                        },
+                        "currentPage": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "itemsPerPage": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "hasNextPage": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "hasPreviousPage": {
+                          "type": "boolean",
+                          "example": false
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid page or limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Page and limit must be positive integers."
                     }
                   }
                 }
@@ -622,6 +1040,197 @@
           },
           "404": {
             "description": "No booking with that id."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "Get the authenticated user's account or all users",
+        "description": "Administrators receive all users. Normal users receive only their own account.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "username": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "customer",
+                          "admin"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "put": {
+        "summary": "Update a user's role",
+        "description": "Allows an authenticated administrator to change only a user's role.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique user ID."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "customer",
+                      "admin"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User role updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "customer",
+                        "admin"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The role is missing or invalid."
+          },
+          "401": {
+            "description": "Authentication is required."
+          },
+          "403": {
+            "description": "Administrator authorization is required."
+          },
+          "404": {
+            "description": "The user was not found."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a user",
+        "description": "Allows an authenticated administrator to delete a user.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique user ID."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User deleted successfully."
+          },
+          "401": {
+            "description": "Authentication is required."
+          },
+          "403": {
+            "description": "Administrator authorization is required."
+          },
+          "404": {
+            "description": "The user was not found."
           },
           "500": {
             "description": "Internal server error."

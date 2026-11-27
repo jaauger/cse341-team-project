@@ -1,6 +1,16 @@
 // public/js/bookings-admin.js
 
 /*
+ * PLAIN ENGLISH: How many bookings to show on one page.
+ * LOGIC: The page always asks the API for 10 bookings at a time.
+ * WHY WE NEED IT: Week 5 (issue #35) asks the Booking Admin page to step
+ *   through the bookings 10 at a time.
+ * LEARNING GAP: This matches the API's default limit of 10. We still send
+ *   limit=10 on purpose, so anyone reading the request can see the page size.
+ */
+const PAGE_SIZE = 10;
+
+/*
  * PLAIN ENGLISH: Make text look nicer by making the first letter a capital.
  * LOGIC: Take the first letter, make it upper case, then add the rest.
  *   If there is no text, send back an empty string.
@@ -57,16 +67,17 @@ const readErrorMessage = async (response, fallback) => {
 };
 
 /*
- * PLAIN ENGLISH: When the Bookings Admin page opens, get the bookings from
- *   the API, show each one as a card, and make the Edit and Delete buttons
- *   work.
- * LOGIC: Keep the bookings in a list in memory (the "notepad"). Draw the
- *   cards from that list. After a successful edit or delete, change the
- *   list in memory and draw the cards again. Cancel only redraws.
+ * PLAIN ENGLISH: When the Bookings Admin page opens, get the first page of
+ *   bookings from the API, show each one as a card, and make the Edit,
+ *   Delete, Previous, and Next buttons work.
+ * LOGIC: Keep the current page of bookings in memory (the "notepad"). Draw
+ *   the cards from that list. Previous and Next ask the API for another
+ *   page. After an edit, swap the one booking in memory. After a delete,
+ *   ask the API for the current page again.
  * WHY WE NEED IT: The Bookings feature (issue #16) asks for the page to be
  *   filled in by client-side JavaScript calling the bookings API. Feature
  *   Set 4 (issue #19) asks that updates and deletes refresh the list
- *   without a page refresh.
+ *   without a page refresh. Week 5 (issue #35) adds paging.
  * LEARNING GAP: Every value is placed with textContent, never innerHTML.
  *   textContent always treats data as plain text, so a name like
  *   <b>Hi</b> shows up as letters, not as real HTML. This keeps the page
@@ -82,6 +93,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const errorEl = document.getElementById('bookings-error');
     const emptyEl = document.getElementById('bookings-empty');
     const messageEl = document.getElementById('bookings-message');
+    const paginationEl = document.getElementById('bookings-pagination');
+    const prevButtonEl = document.getElementById('bookings-prev');
+    const nextButtonEl = document.getElementById('bookings-next');
+    const pageInfoEl = document.getElementById('bookings-page-info');
 
     // Stop quietly if this script is ever loaded on a different page.
     if (!listEl || !templateEl) {
@@ -90,13 +105,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /*
      * PLAIN ENGLISH: The page's memory.
-     * LOGIC: bookings holds the list from the API. ticketClasses holds the
-     *   choices for the edit form. editingId remembers which booking's
+     * LOGIC: bookings holds the CURRENT PAGE of bookings from the API.
+     *   pagination holds the info card (total, page number, next/previous).
+     *   currentPage remembers which page is showing. ticketClasses holds
+     *   the choices for the edit form. editingId remembers which booking's
      *   form is open (null means none).
      * LEARNING GAP: Changing these does not change the screen by itself.
-     *   renderBookings() must run to redraw the cards.
+     *   renderBookings() and renderPagination() must run to redraw.
      */
     let bookings = [];
+    let pagination = null;
+    let currentPage = 1;
     let ticketClasses = [];
     let editingId = null;
 
@@ -250,11 +269,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     /*
-     * PLAIN ENGLISH: Draw all the booking cards from the page's memory.
+     * PLAIN ENGLISH: Draw all the booking cards for the current page.
      * LOGIC: If the list is empty, show "No bookings yet." Otherwise, build
      *   one card per booking and put them all on the page at once.
-     * WHY WE NEED IT: After an edit, delete, or cancel, this redraws the
-     *   list so the page matches the data, with no page refresh.
+     * WHY WE NEED IT: After an edit, delete, cancel, or page change, this
+     *   redraws the list so the page matches the data, with no page refresh.
      * LEARNING GAP: replaceChildren() swaps out all the old cards in one
      *   step, so the page never shows a half-updated list.
      */
@@ -269,6 +288,109 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         listEl.replaceChildren(fragment);
     };
+
+    /*
+     * PLAIN ENGLISH: Update the page bar: "Page X of Y" and the Previous
+     *   and Next buttons.
+     * LOGIC: Hide the bar if there are no bookings at all. Otherwise, write
+     *   the page words, and turn Previous off when hasPreviousPage is false
+     *   and Next off when hasNextPage is false.
+     * WHY WE NEED IT: Week 5 (issue #35) asks for pagination controls that
+     *   step through the results 10 at a time.
+     * LEARNING GAP: The buttons follow the info card from the SERVER
+     *   (hasNextPage, hasPreviousPage). The page does not count bookings
+     *   itself, so the buttons are always right, even for a normal user who
+     *   only sees their own bookings.
+     */
+    const renderPagination = () => {
+        if (!paginationEl || !pagination) {
+            return;
+        }
+
+        if (pagination.totalItems === 0) {
+            paginationEl.hidden = true;
+            return;
+        }
+
+        paginationEl.hidden = false;
+        pageInfoEl.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages} (${pagination.totalItems} bookings)`;
+        prevButtonEl.disabled = !pagination.hasPreviousPage;
+        nextButtonEl.disabled = !pagination.hasNextPage;
+    };
+
+    /*
+     * PLAIN ENGLISH: Ask the API for one page of bookings and show it.
+     * LOGIC: Call /api/bookings?page=X&limit=10. Check the answer has a
+     *   bookings list. Save the list, the info card, and the page number,
+     *   then redraw the cards and the page bar. If the page came back empty
+     *   but earlier pages exist (for example, after deleting the last
+     *   booking on the last page), load the new last page instead.
+     * WHY WE NEED IT: Opening the page, clicking Previous or Next, and
+     *   deleting a booking all need a fresh page from the server.
+     * LEARNING GAP: The API now sends { bookings: [...], pagination: {...} },
+     *   the same shape as the trains API, so we read data.bookings. Before
+     *   Week 5 it sent a plain list [ ... ].
+     *   Both page buttons are turned off while waiting, so a quick double
+     *   click cannot ask for two pages at once.
+     *   If something fails, this throws an error, and the code that called
+     *   it decides which message to show.
+     */
+    const loadBookings = async (page) => {
+        if (prevButtonEl && nextButtonEl) {
+            prevButtonEl.disabled = true;
+            nextButtonEl.disabled = true;
+        }
+
+        const response = await fetch(`/api/bookings?page=${page}&limit=${PAGE_SIZE}`);
+        if (!response.ok) {
+            const reason = await readErrorMessage(response, `Failed to load bookings (${response.status})`);
+            throw new Error(reason);
+        }
+
+        const data = await response.json();
+        if (!data || !Array.isArray(data.bookings) || !data.pagination) {
+            throw new Error('Bookings data was not in the expected shape');
+        }
+
+        if (data.bookings.length === 0 && data.pagination.totalPages > 0 && page > data.pagination.totalPages) {
+            await loadBookings(data.pagination.totalPages);
+            return;
+        }
+
+        bookings = data.bookings;
+        pagination = data.pagination;
+        currentPage = data.pagination.currentPage;
+
+        renderBookings();
+        renderPagination();
+    };
+
+    /*
+     * PLAIN ENGLISH: Go to another page when Previous or Next is clicked.
+     * LOGIC: Close any open edit form, then load the requested page. If it
+     *   fails, show a short error message and put the buttons back the way
+     *   they were.
+     * LEARNING GAP: One helper for both buttons keeps the steps the same.
+     *   scrollIntoView brings the top of the list back into view, so the
+     *   user does not stay at the bottom of the page after clicking Next.
+     */
+    const goToPage = async (page) => {
+        editingId = null;
+
+        try {
+            await loadBookings(page);
+            listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (error) {
+            console.error('Error changing page:', error);
+            showMessage('Could not load that page. Please try again.', true);
+            renderPagination();
+        }
+    };
+
+    if (prevButtonEl && nextButtonEl) {
+        prevButtonEl.addEventListener('click', () => goToPage(currentPage - 1));
+        nextButtonEl.addEventListener('click', () => goToPage(currentPage + 1));
+    }
 
     /*
      * PLAIN ENGLISH: Read the edit form and turn it into the data the PUT
@@ -297,11 +419,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /*
      * PLAIN ENGLISH: Delete one booking after the user says yes.
-     * LOGIC: Ask "Are you sure?" If yes, send DELETE. On 204, remove the
-     *   booking from memory, redraw, and show a message. Otherwise, show
+     * LOGIC: Ask "Are you sure?" If yes, send DELETE. On 204, ask the API
+     *   for the current page again, then show a message. Otherwise, show
      *   the server's reason (like 403 "not allowed").
      * LEARNING GAP: confirm() pauses until the user clicks OK or Cancel.
      *   encodeURIComponent makes the booking code safe to put in a URL.
+     *   Week 5 change: we reload the page from the server instead of only
+     *   removing the card. Deleting changes the total, so the next booking
+     *   should slide up into the empty spot, and "Page X of Y" must update.
      */
     const deleteBooking = async (id) => {
         const confirmed = window.confirm(`Delete booking ${id}? This cannot be undone.`);
@@ -315,11 +440,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             if (response.status === 204) {
-                bookings = bookings.filter((booking) => booking.id !== id);
                 if (editingId === id) {
                     editingId = null;
                 }
-                renderBookings();
+                await loadBookings(currentPage);
                 showMessage(`Booking ${id} was deleted.`);
                 return;
             }
@@ -339,6 +463,8 @@ document.addEventListener('DOMContentLoaded', async () => {
      *   show a message. Otherwise, show the server's reason inside the form.
      * LEARNING GAP: The Content-Type header tells the server "this is
      *   JSON," so express.json() in app.js can read it into req.body.
+     *   An edit does not change how many bookings there are, so the page
+     *   does not need to be reloaded from the server.
      */
     const saveBooking = async (id, formEl) => {
         const errorLineEl = formEl.querySelector('[data-field="edit-error"]');
@@ -420,34 +546,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /*
      * PLAIN ENGLISH: Load everything when the page opens.
-     * LOGIC: Get the ticket class choices and the bookings. Hide "Loading,"
-     *   then draw the cards. If the bookings request fails, show a friendly
-     *   error message instead.
-     * LEARNING GAP: Our API sends the list directly, like [ ... ]. The
-     *   trains API wraps its list, like { trains: [ ... ] }, which is why
-     *   the trains code reads payload.trains. We do not need that here.
-     *   Array.isArray makes sure we really got a list.
+     * LOGIC: Get the ticket class choices, then page 1 of the bookings.
+     *   Hide "Loading" either way. If the bookings request fails, show a
+     *   friendly error message instead.
+     * LEARNING GAP: The page only ever asks for ONE page of bookings. It
+     *   never downloads all of them and hides the rest. The server decides
+     *   which 10 to send.
      */
     try {
         await loadTicketClasses();
-
-        const response = await fetch('/api/bookings');
-        if (!response.ok) {
-            throw new Error(`Failed to load bookings (${response.status})`);
-        }
-
-        const data = await response.json();
-        if (!Array.isArray(data)) {
-            throw new Error('Bookings data was not a list');
-        }
-
-        bookings = data;
+        await loadBookings(1);
 
         if (loadingEl) {
             loadingEl.hidden = true;
         }
-
-        renderBookings();
     } catch (error) {
         console.error('Error loading bookings:', error);
         if (loadingEl) {
