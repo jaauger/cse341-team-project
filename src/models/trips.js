@@ -8,6 +8,20 @@ export async function getAllTrips() {
     return trip.find({}).lean();
 }
 
+export async function getPaginatedTrips({ page, limit }) {
+    const skip = (page - 1) * limit;
+
+    const trips = await trip.find({})
+        .sort({ name: 1, _id: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    const totalItems = await trip.countDocuments({});
+
+    return { trips, totalItems };
+}
+
 export const updateTrip = async (id, tripData) => {
     const allowedUpdates = {};
 
