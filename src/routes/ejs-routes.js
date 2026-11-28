@@ -77,7 +77,7 @@ router.get('/bookings-admin', requirePageLogin, bookingsAdminPage);
 router.get('/trips-admin', requirePageRole('admin'), tripsAdminPage);
 
 // User Management page
-router.get('/admin/users', requirePageLogin, getUsersPage);
+router.get('/users-admin', requirePageLogin, getUsersPage);
 
 // Rail trips, bookings, and confirmations
 router.use('/trips', tripsPageRouter);

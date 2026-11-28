@@ -867,35 +867,149 @@ router.delete('/bookings/:id', requireApiLogin, deleteBooking);
  * @openapi
  * /users:
  *   get:
- *     summary: Get the authenticated user's account or all users
- *     description: Administrators receive all users. Normal users receive only their own account.
+ *     summary: Get a paginated user list
+ *     description: >
+ *       Returns a paginated user list sorted by username. Administrators
+ *       receive all users. Other authenticated users receive only their own
+ *       account. Valid requests with no users on the requested page return
+ *       an empty users array and pagination metadata.
  *     tags:
  *       - Users
  *     security:
  *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number to return; must be a positive integer.
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of users per page; must be between 1 and 50.
+ *       - in: query
+ *         name: sortBy
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - username
+ *           default: username
+ *         description: User field used for sorting.
+ *       - in: query
+ *         name: sortOrder
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - asc
+ *             - desc
+ *           default: asc
+ *         description: Sort direction; username sorting is case-insensitive.
  *     responses:
  *       '200':
- *         description: Successfully retrieved user data.
+ *         description: Successfully retrieved user data and pagination metadata.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                   displayName:
- *                     type: string
- *                   username:
- *                     type: string
- *                   email:
- *                     type: string
- *                   role:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       displayName:
+ *                         type: string
+ *                       username:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       role:
+ *                         type: string
+ *                         nullable: true
+ *                         enum:
+ *                           - customer
+ *                           - admin
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     currentPage:
+ *                       type: integer
+ *                     itemsPerPage:
+ *                       type: integer
+ *                     hasNextPage:
+ *                       type: boolean
+ *                     hasPreviousPage:
+ *                       type: boolean
+ *                 query:
+ *                   type: object
+ *                   properties:
+ *                     sortBy:
+ *                       type: string
+ *                       enum:
+ *                         - username
+ *                     sortOrder:
+ *                       type: string
+ *                       enum:
+ *                         - asc
+ *                         - desc
+ *             example:
+ *               users: []
+ *               pagination:
+ *                 totalItems: 13
+ *                 totalPages: 2
+ *                 currentPage: 1
+ *                 itemsPerPage: 10
+ *                 hasNextPage: true
+ *                 hasPreviousPage: false
+ *               query:
+ *                 sortBy: username
+ *                 sortOrder: asc
+ *       '400':
+ *         description: Invalid pagination or sorting parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                 allowedFields:
+ *                   type: array
+ *                   items:
  *                     type: string
  *                     enum:
- *                       - customer
- *                       - admin
+ *                       - username
+ *             examples:
+ *               invalidPagination:
+ *                 summary: Invalid page or limit
+ *                 value:
+ *                   error: Page and limit must be positive integers.
+ *               invalidSortField:
+ *                 summary: Unsupported sort field
+ *                 value:
+ *                   error: Invalid sort field.
+ *                   allowedFields:
+ *                     - username
+ *               invalidSortOrder:
+ *                 summary: Unsupported sort direction
+ *                 value:
+ *                   error: Sort order must be asc or desc.
  *       '401':
  *         description: Authentication is required.
  *       '500':

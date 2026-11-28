@@ -20,6 +20,78 @@
 .users-catalog {
     display: block;
 
+    .users-controls {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-md);
+        margin: var(--space-lg) 0;
+
+        label {
+            color: var(--clr-text-primary);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+
+        select {
+            min-height: 42px;
+            padding: var(--space-sm) var(--space-md);
+            border: 1px solid var(--clr-primary-light);
+            border-radius: var(--radius-sm);
+            background-color: var(--clr-surface);
+            color: var(--clr-text-primary);
+            font: inherit;
+
+            &:focus {
+                outline: 2px solid var(--clr-primary);
+                outline-offset: 1px;
+            }
+
+            &:disabled {
+                cursor: not-allowed;
+                opacity: 0.6;
+            }
+        }
+    }
+
+    .users-results-summary {
+        margin: var(--space-md) 0;
+        color: var(--clr-text-secondary);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+
+    .users-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: var(--space-md);
+        margin: var(--space-xl) 0;
+
+        &[hidden] {
+            display: none;
+        }
+
+        button {
+            min-width: 100px;
+            padding: var(--space-sm) var(--space-md);
+            cursor: pointer;
+
+            &:disabled {
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+        }
+
+        #users-page-info {
+            min-width: 100px;
+            color: var(--clr-text-primary);
+            font-weight: 500;
+            text-align: center;
+        }
+    }
+
     .users-state {
         margin-bottom: var(--space-md);
         color: var(--clr-text-secondary);
@@ -157,6 +229,15 @@
     }
 
     .users-catalog {
+        .users-controls {
+            align-items: stretch;
+            flex-direction: column;
+
+            select {
+                width: 100%;
+            }
+        }
+
         .user-card-header {
             align-items: flex-start;
             flex-direction: column;
