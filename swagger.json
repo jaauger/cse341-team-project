@@ -759,8 +759,8 @@
     },
     "/bookings": {
       "get": {
-        "summary": "Get one page of bookings for the logged-in user",
-        "description": "Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Sorted by booking date, newest first. Returns one page at a time, plus page info. The Bookings Admin page uses this to fill in its list.",
+        "summary": "Get one page of bookings for the logged-in user, with optional filters",
+        "description": "Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Sorted by booking date, newest first. Returns one page at a time, plus page info and a query info card. Can be narrowed by ticket class and by booking date range. Filters can be used alone or together, and they never let a normal user see someone else's bookings. The Bookings Admin page uses this to fill in its list.",
         "tags": [
           "Bookings"
         ],
@@ -787,11 +787,43 @@
               "default": 10
             },
             "description": "The most bookings to return on one page."
+          },
+          {
+            "in": "query",
+            "name": "ticketClass",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "premium"
+            },
+            "description": "Show only bookings with this ticket class. Must be a real ticket class from the ticket classes collection (standard, premium, or first). Capital letters do not matter."
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-11-01"
+            },
+            "description": "Show only bookings made on or after the start of this day (UTC). Format YYYY-MM-DD."
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-11-30"
+            },
+            "description": "Show only bookings made on or before the END of this day (UTC). Format YYYY-MM-DD. Must not be before startDate."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved one page of bookings. A page past the end returns an empty bookings list.",
+            "description": "Successfully retrieved one page of bookings. A page past the end, or filters that match nothing, return an empty bookings list.",
             "content": {
               "application/json": {
                 "schema": {
@@ -877,6 +909,46 @@
                           "example": false
                         }
                       }
+                    },
+                    "query": {
+                      "type": "object",
+                      "description": "Which filters and sorting were used. Same shape as the Trains search. Filters that were not used are null.",
+                      "properties": {
+                        "search": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Always null. Booking Admin has no keyword search.",
+                          "example": null
+                        },
+                        "filters": {
+                          "type": "object",
+                          "properties": {
+                            "ticketClass": {
+                              "type": "string",
+                              "nullable": true,
+                              "example": "premium"
+                            },
+                            "startDate": {
+                              "type": "string",
+                              "nullable": true,
+                              "example": "2026-11-01"
+                            },
+                            "endDate": {
+                              "type": "string",
+                              "nullable": true,
+                              "example": "2026-11-30"
+                            }
+                          }
+                        },
+                        "sortBy": {
+                          "type": "string",
+                          "example": "createdAt"
+                        },
+                        "sortOrder": {
+                          "type": "string",
+                          "example": "desc"
+                        }
+                      }
                     }
                   }
                 }
@@ -884,7 +956,7 @@
             }
           },
           "400": {
-            "description": "Invalid page or limit.",
+            "description": "Invalid page or limit, a ticket class that does not exist, a date that is not a real YYYY-MM-DD date, a startDate after the endDate, or a filter sent more than once.",
             "content": {
               "application/json": {
                 "schema": {
@@ -892,7 +964,7 @@
                   "properties": {
                     "error": {
                       "type": "string",
-                      "example": "Page and limit must be positive integers."
+                      "example": "startDate must be on or before endDate."
                     }
                   }
                 }

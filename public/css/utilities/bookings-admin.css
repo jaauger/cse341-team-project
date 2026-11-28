@@ -145,3 +145,54 @@
         }
     }
 }
+
+/*
+ * PLAIN ENGLISH: Styles for the filter bar on the Bookings Admin page
+ *   (Ticket Class, From, To, Apply, Clear).
+ * LOGIC: A pale green box, like the top box (.bookings-hero). The labels
+ *   and boxes sit side by side and wrap to the next line on small screens.
+ *   Each label stacks its words above its box.
+ * WHY WE NEED IT: Week 5 Feature Set 3, PR 2 (issue #43) adds filters to
+ *   this page, and they should match the page's green look.
+ * LEARNING GAP: flex-wrap: wrap lets the boxes move to a new line on a
+ *   phone instead of squeezing too small or scrolling sideways.
+ *   align-items: flex-end lines up the buttons with the bottom of the
+ *   boxes, not the top of the labels.
+ *   This section is added at the END of the file, so the earlier rules
+ *   are not changed. The Apply and Clear buttons reuse the booking-button
+ *   style, so they match Edit, Delete, Previous, and Next.
+ */
+.bookings-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--clr-primary-pale);
+    border: 1px solid var(--clr-primary-light);
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+        color: var(--clr-text-secondary);
+        font-size: var(--font-size-sm);
+    }
+
+    select,
+    input {
+        padding: var(--space-xs) var(--space-sm);
+        border: 1px solid var(--clr-border);
+        border-radius: var(--radius-sm);
+        background-color: var(--clr-surface);
+        color: var(--clr-text-primary);
+        font: inherit;
+    }
+
+    .bookings-filter-actions {
+        display: flex;
+        gap: var(--space-sm);
+    }
+}

@@ -48,6 +48,25 @@ const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
 
 /*
+ * PLAIN ENGLISH: How the bookings list is always sorted, and how long one
+ *   day is.
+ * LOGIC: SORT_BY and SORT_ORDER say "by booking date, newest first."
+ *   ONE_DAY_MS is one day in milliseconds (24 hours x 60 minutes x
+ *   60 seconds x 1000).
+ * WHY WE NEED IT: Issue #43 asks every filtered answer to include a "query"
+ *   info card that says how the list was sorted, the same as Jason's Trains
+ *   search (PR #34). ONE_DAY_MS lets the end date include the WHOLE day.
+ * LEARNING GAP: The real sorting happens in getPaginatedBookings in the
+ *   model file ({ createdAt: -1 }). These two words only REPORT that rule
+ *   in the info card. Bookings has no sortBy choice for users, because the
+ *   assignment says the list is sorted by booking date.
+ * DATA COMES FROM: Written here in the code.
+ */
+const SORT_BY = "createdAt";
+const SORT_ORDER = "desc";
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+/*
  * PLAIN ENGLISH: Check that a value is real text, not empty or just spaces.
  * LOGIC: It must be a string, and after trim() removes the spaces at the
  *   start and end, it must still have at least one character.
@@ -149,6 +168,155 @@ function buildPaginationInfo(page, limit, totalItems) {
     itemsPerPage: limit,
     hasNextPage: page < totalPages,
     hasPreviousPage: page > 1 && totalPages > 0,
+  };
+}
+
+/*
+ * PLAIN ENGLISH: Turn date text like "2026-11-01" into a real date, or
+ *   give back null if it is not a real date.
+ * LOGIC: First, the pattern /^\d{4}-\d{2}-\d{2}$/ checks the shape:
+ *   4 digits, dash, 2 digits, dash, 2 digits. Then we build the date at the
+ *   very start of that day in UTC (T00:00:00.000Z). Last, we turn the date
+ *   back into text and make sure it is the SAME text we started with.
+ * WHY WE NEED IT: Issue #43 says a bad date must get a clear 400 answer
+ *   instead of a broken database search.
+ * LEARNING GAP: JavaScript quietly "fixes" impossible dates. February 30
+ *   becomes March 2 instead of an error. Turning the date back into text
+ *   catches that: "2026-03-02" is not "2026-02-30", so we return null.
+ *   The "Z" means UTC, so the day starts at the same moment no matter
+ *   where the server is. Without it, the server's own time zone would
+ *   shift the range by several hours.
+ *   YYYY-MM-DD is also the exact format a browser date box sends, so the
+ *   Booking Admin page needs no extra changes to match.
+ * DATA COMES FROM: req.query.startDate and req.query.endDate, through
+ *   readFilters below.
+ */
+function readDateText(text) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return null;
+  }
+
+  const date = new Date(`${text}T00:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== text) {
+    return null;
+  }
+
+  return date;
+}
+
+/*
+ * PLAIN ENGLISH: Read the ticket class and date range filters from the web
+ *   address, check them, and build the "only these bookings" note for the
+ *   database.
+ * LOGIC: In this order:
+ *   1. If any filter was sent twice (Express turns it into a list), return
+ *      { error }.
+ *   2. Clean each value: trim the spaces, and lowercase the ticket class.
+ *      An empty value means "not used."
+ *   3. Check each date with readDateText. A bad date → { error }.
+ *   4. If both dates are used, the start must not be after the end.
+ *   5. Build the database note:
+ *      - ticketClass → only bookings with that class.
+ *      - startDate → createdAt is on or after the start of that day ($gte).
+ *      - endDate → createdAt is before the start of the NEXT day ($lt).
+ *   Return { filters, databaseFilter }.
+ * WHY WE NEED IT: Issue #43 (Week 5 Feature Set 3, PR 2) asks for filtering
+ *   by ticket class and booking date range, with clear 400 errors for bad
+ *   values.
+ * LEARNING GAP: $gte means "greater than or equal" and $lt means "less
+ *   than." These are MongoDB's comparison words.
+ *   Why "before the next day" for the end date? A booking made at 3:00 PM
+ *   on Nov 30 is AFTER the very start of Nov 30. If we said "on or before
+ *   Nov 30 at 00:00," that booking would be left out. "Before Dec 1 at
+ *   00:00" keeps the whole last day.
+ *   The ticket class is only checked for its SHAPE here. Whether it is a
+ *   real class is checked in getAllBookings, because that needs the
+ *   database.
+ *   "filters" is what goes back in the info card. "databaseFilter" is what
+ *   MongoDB reads. They hold the same choices, written two ways.
+ * DATA COMES FROM: req.query (the part of the web address after the "?").
+ */
+function readFilters(query) {
+  const { ticketClass, startDate, endDate } = query;
+
+  if (
+    (ticketClass !== undefined && typeof ticketClass !== "string") ||
+    (startDate !== undefined && typeof startDate !== "string") ||
+    (endDate !== undefined && typeof endDate !== "string")
+  ) {
+    return {
+      error: "ticketClass, startDate, and endDate can each be sent only once.",
+    };
+  }
+
+  const ticketClassText = ticketClass ? ticketClass.trim().toLowerCase() : "";
+  const startText = startDate ? startDate.trim() : "";
+  const endText = endDate ? endDate.trim() : "";
+
+  const start = startText ? readDateText(startText) : null;
+  const end = endText ? readDateText(endText) : null;
+
+  if ((startText && !start) || (endText && !end)) {
+    return {
+      error: "startDate and endDate must be real dates in YYYY-MM-DD format, like 2026-11-01.",
+    };
+  }
+
+  if (start && end && start > end) {
+    return { error: "startDate must be on or before endDate." };
+  }
+
+  const databaseFilter = {};
+
+  if (ticketClassText) {
+    databaseFilter.ticketClass = ticketClassText;
+  }
+
+  if (start || end) {
+    databaseFilter.createdAt = {};
+
+    if (start) {
+      databaseFilter.createdAt.$gte = start;
+    }
+
+    if (end) {
+      databaseFilter.createdAt.$lt = new Date(end.getTime() + ONE_DAY_MS);
+    }
+  }
+
+  return {
+    filters: {
+      ticketClass: ticketClassText || null,
+      startDate: startText || null,
+      endDate: endText || null,
+    },
+    databaseFilter,
+  };
+}
+
+/*
+ * PLAIN ENGLISH: Build the "query" info card that says which filters and
+ *   sorting were used for this list.
+ * LOGIC: search is null, the filters are copied in, and sortBy / sortOrder
+ *   report "booking date, newest first."
+ * WHY WE NEED IT: The assignment asks that filtered answers include the
+ *   search filters that were used. The team agreed every list uses the
+ *   same shape as Jason's Trains search (PR #34): { search, filters,
+ *   sortBy, sortOrder }.
+ * LEARNING GAP: search is null because Booking Admin has no keyword search
+ *   (the assignment asks only for ticket class and date range). We keep the
+ *   slot anyway, so every list in our API looks the same to the person
+ *   using it. A filter that was not used shows as null, not left out, so
+ *   the card always has the same keys.
+ * DATA COMES FROM: The filters from readFilters above.
+ */
+function buildQueryInfo(filters) {
+  return {
+    search: null,
+    filters,
+    sortBy: SORT_BY,
+    sortOrder: SORT_ORDER,
   };
 }
 
@@ -265,30 +433,40 @@ function buildBookingUpdate(body, validClasses) {
 }
 
 /*
- * PLAIN ENGLISH: Send ONE PAGE of bookings as JSON, plus an info card about
- *   the page. Admins page through every booking. Everyone else pages
- *   through only the bookings they are a passenger on.
+ * PLAIN ENGLISH: Send ONE PAGE of bookings as JSON, plus two info cards:
+ *   one about the page and one about the filters. Admins page through every
+ *   booking. Everyone else pages through only the bookings they are a
+ *   passenger on. Either one can narrow the list by ticket class and
+ *   booking date range.
  * LOGIC: In this order:
  *   1. Check page and limit with readPagination. Bad values → 400.
- *   2. Build the filter note: admin = {} (all bookings), everyone else =
- *      only bookings with their email.
- *   3. Ask getPaginatedBookings for that page and the total count.
- *   4. Send 200 with { bookings, pagination }.
+ *   2. Check the filters with readFilters. Bad values → 400.
+ *   3. If a ticket class was sent, make sure it really exists in the
+ *      ticket classes collection. Not real → 400 listing the real ones.
+ *   4. Start with the filter note from readFilters. Admins use it as is.
+ *      Everyone else also gets "only bookings with their email" added.
+ *   5. Ask getPaginatedBookings for that page and the total count.
+ *   6. Send 200 with { bookings, pagination, query }.
  *   If something breaks, send status 500 and a short error.
  * WHY WE NEED IT: This answers GET /api/bookings. Week 5 Feature Set 3
- *   (issue #35) asks for the Booking Admin list to come 10 at a time,
- *   sorted by booking date, with page info. Feature Set 4's rule (each
- *   person sees the right list) still applies.
+ *   asks for the Booking Admin list to come 10 at a time, sorted by booking
+ *   date (issue #35), and to be filtered by ticket class and booking date
+ *   range (issue #43). Feature Set 4's rule (each person sees the right
+ *   list) still applies.
  * LEARNING GAP: The route lock (requireApiLogin) already sent 401 to anyone
  *   not logged in, so by the time this runs, req.user always exists.
- *   The answer used to be a plain list [ ... ]. Now it is an object
- *   { bookings: [...], pagination: {...} }, the same shape as Jason's
- *   trains API. The Booking Admin page JavaScript must read .bookings now.
- *   A page past the end, or a user with no bookings, is still a success
- *   (200) with an empty list, not a 404.
- * DATA COMES FROM: req.query (page and limit), req.user (the login
- *   session), and getPaginatedBookings in src/models/bookings.js, which
- *   reads the "bookings" collection.
+ *   The filters are ADDED to the email rule, never swapped for it. So a
+ *   normal user who filters by "first" sees only THEIR first class
+ *   bookings, not everyone's. { ...a, ...b } copies both notes into one.
+ *   The ticket class list is only fetched when a ticket class was sent, so
+ *   a normal request does not make an extra trip to the database.
+ *   The same filter goes to the page AND the count (in the model), so
+ *   totalItems counts only the bookings that match the filters.
+ *   No matches is still a success (200) with an empty list, not a 404.
+ * DATA COMES FROM: req.query (page, limit, ticketClass, startDate,
+ *   endDate), req.user (the login session), the ticket classes collection
+ *   (getAllTicketClasses), and getPaginatedBookings in
+ *   src/models/bookings.js, which reads the "bookings" collection.
  */
 export async function getAllBookings(req, res) {
   try {
@@ -298,7 +476,27 @@ export async function getAllBookings(req, res) {
       return res.status(400).json({ error });
     }
 
-    let filter = {};
+    const filterResult = readFilters(req.query);
+
+    if (filterResult.error) {
+      return res.status(400).json({ error: filterResult.error });
+    }
+
+    const { filters, databaseFilter } = filterResult;
+
+    if (filters.ticketClass) {
+      const ticketClasses = await getAllTicketClasses();
+      const validClasses = ticketClasses.map((ticketClass) => ticketClass.class);
+
+      if (!validClasses.includes(filters.ticketClass)) {
+        return res.status(400).json({
+          error: `ticketClass must be one of: ${validClasses.join(", ")}.`,
+        });
+      }
+    }
+
+    const queryInfo = buildQueryInfo(filters);
+    let filter = { ...databaseFilter };
 
     if (req.user.role !== "admin") {
       const email = await getUserEmailById(req.user.id);
@@ -307,10 +505,11 @@ export async function getAllBookings(req, res) {
         return res.status(200).json({
           bookings: [],
           pagination: buildPaginationInfo(page, limit, 0),
+          query: queryInfo,
         });
       }
 
-      filter = buildPassengerEmailFilter(email);
+      filter = { ...filter, ...buildPassengerEmailFilter(email) };
     }
 
     const { bookings, totalItems } = await getPaginatedBookings({
@@ -322,6 +521,7 @@ export async function getAllBookings(req, res) {
     return res.status(200).json({
       bookings,
       pagination: buildPaginationInfo(page, limit, totalItems),
+      query: queryInfo,
     });
   } catch (error) {
     console.error("Error fetching bookings:", error);

@@ -30,11 +30,15 @@ const capitalize = (text) => {
  * PLAIN ENGLISH: Turn a saved date into an easy-to-read date, like
  *   "Nov 16, 2026."
  * LOGIC: new Date() reads the saved date. toLocaleDateString() writes it
- *   in month, day, year order.
+ *   in month, day, year order. timeZone: 'UTC' shows the date in UTC.
  * WHY WE NEED IT: The database saves dates in a long computer format that
  *   is hard for people to read.
- * LEARNING GAP: This uses the same date style as the thank-you page
- *   (src/views/trips/confirm.ejs), so both pages look the same.
+ * LEARNING GAP: Week 5 PR 2 (issue #43) change: the date filter on this
+ *   page works in UTC. Without timeZone: 'UTC', a booking made at 7 PM in
+ *   Hawaii (which is already the next day in UTC) would SHOW one date on
+ *   the card but be FILTERED as the next day. Showing UTC here makes the
+ *   card and the filter always agree. The month, day, year style still
+ *   matches the thank-you page (src/views/trips/confirm.ejs).
  */
 const formatDate = (value) => {
     if (!value) {
@@ -43,7 +47,8 @@ const formatDate = (value) => {
     return new Date(value).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: 'UTC'
     });
 };
 
@@ -69,15 +74,18 @@ const readErrorMessage = async (response, fallback) => {
 /*
  * PLAIN ENGLISH: When the Bookings Admin page opens, get the first page of
  *   bookings from the API, show each one as a card, and make the Edit,
- *   Delete, Previous, and Next buttons work.
- * LOGIC: Keep the current page of bookings in memory (the "notepad"). Draw
- *   the cards from that list. Previous and Next ask the API for another
- *   page. After an edit, swap the one booking in memory. After a delete,
- *   ask the API for the current page again.
+ *   Delete, Previous, Next, Apply, and Clear buttons work.
+ * LOGIC: Keep the current page of bookings and the current filters in
+ *   memory (the "notepad"). Draw the cards from that list. Previous and
+ *   Next ask the API for another page with the same filters. Apply and
+ *   Clear change the filters and go back to page 1. After an edit, swap the
+ *   one booking in memory. After a delete, ask the API for the current page
+ *   again.
  * WHY WE NEED IT: The Bookings feature (issue #16) asks for the page to be
  *   filled in by client-side JavaScript calling the bookings API. Feature
  *   Set 4 (issue #19) asks that updates and deletes refresh the list
- *   without a page refresh. Week 5 (issue #35) adds paging.
+ *   without a page refresh. Week 5 adds paging (issue #35) and filtering by
+ *   ticket class and booking date range (issue #43).
  * LEARNING GAP: Every value is placed with textContent, never innerHTML.
  *   textContent always treats data as plain text, so a name like
  *   <b>Hi</b> shows up as letters, not as real HTML. This keeps the page
@@ -97,6 +105,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const prevButtonEl = document.getElementById('bookings-prev');
     const nextButtonEl = document.getElementById('bookings-next');
     const pageInfoEl = document.getElementById('bookings-page-info');
+    const filterFormEl = document.getElementById('bookings-filters');
+    const filterClassEl = document.getElementById('filter-ticket-class');
+    const filterStartEl = document.getElementById('filter-start-date');
+    const filterEndEl = document.getElementById('filter-end-date');
+    const clearButtonEl = document.getElementById('bookings-clear-filters');
 
     // Stop quietly if this script is ever loaded on a different page.
     if (!listEl || !templateEl) {
@@ -108,16 +121,21 @@ document.addEventListener('DOMContentLoaded', async () => {
      * LOGIC: bookings holds the CURRENT PAGE of bookings from the API.
      *   pagination holds the info card (total, page number, next/previous).
      *   currentPage remembers which page is showing. ticketClasses holds
-     *   the choices for the edit form. editingId remembers which booking's
-     *   form is open (null means none).
+     *   the choices for the edit form and the filter. editingId remembers
+     *   which booking's form is open (null means none). filters holds the
+     *   filters being used right now ('' means "not used").
      * LEARNING GAP: Changing these does not change the screen by itself.
      *   renderBookings() and renderPagination() must run to redraw.
+     *   filters lives in memory (not read from the boxes every time), so
+     *   Previous and Next always use the filters that were last APPLIED,
+     *   even if someone changed a box but did not click Apply yet.
      */
     let bookings = [];
     let pagination = null;
     let currentPage = 1;
     let ticketClasses = [];
     let editingId = null;
+    let filters = { ticketClass: '', startDate: '', endDate: '' };
 
     /*
      * PLAIN ENGLISH: Show a short message at the top of the list, like
@@ -137,10 +155,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     /*
-     * PLAIN ENGLISH: Get the ticket class choices for the edit form.
-     * LOGIC: Call /api/ticket-classes. If it works, save the list. If it
-     *   fails, keep an empty list; the form then offers only the booking's
-     *   current ticket class.
+     * PLAIN ENGLISH: Is any filter being used right now?
+     * LOGIC: Look at the three filter values. If any one is not empty,
+     *   the answer is true.
+     * WHY WE NEED IT: The "no bookings" message should say "No bookings
+     *   match these filters." when a filter is on, and "No bookings yet."
+     *   when it is not. Those mean different things to the user.
+     * LEARNING GAP: some(Boolean) is a short way to ask "is at least one of
+     *   these not empty?" An empty string '' counts as false.
+     */
+    const hasActiveFilters = () => Object.values(filters).some(Boolean);
+
+    /*
+     * PLAIN ENGLISH: Add the real ticket classes to the filter dropdown.
+     * LOGIC: For each ticket class from the API, make one choice in the
+     *   list, using its code (like premium) as the value and its name
+     *   (like Premium Class) as the words.
+     * WHY WE NEED IT: Issue #43 says the ticket class filter must use real
+     *   classes. Using the API list means the dropdown can never offer a
+     *   class that does not exist.
+     * LEARNING GAP: "All classes" is already in the page (value ''), so it
+     *   always stays first. If the API fails, only "All classes" is shown,
+     *   and the date filters still work.
+     */
+    const fillFilterClasses = () => {
+        if (!filterClassEl) {
+            return;
+        }
+        ticketClasses.forEach((ticketClass) => {
+            const optionEl = document.createElement('option');
+            optionEl.value = ticketClass.class;
+            optionEl.textContent = ticketClass.name || capitalize(ticketClass.class);
+            filterClassEl.appendChild(optionEl);
+        });
+    };
+
+    /*
+     * PLAIN ENGLISH: Get the ticket class choices for the edit form and the
+     *   filter.
+     * LOGIC: Call /api/ticket-classes. If it works, save the list and fill
+     *   the filter dropdown. If it fails, keep an empty list; the edit form
+     *   then offers only the booking's current ticket class.
      * LEARNING GAP: This uses the Ticket Classes API from PR #6, so the
      *   choices always match what really exists in the database.
      */
@@ -150,6 +205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (response.ok) {
                 const data = await response.json();
                 ticketClasses = Array.isArray(data) ? data : [];
+                fillFilterClasses();
             }
         } catch (error) {
             console.error('Error loading ticket classes:', error);
@@ -270,15 +326,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /*
      * PLAIN ENGLISH: Draw all the booking cards for the current page.
-     * LOGIC: If the list is empty, show "No bookings yet." Otherwise, build
-     *   one card per booking and put them all on the page at once.
-     * WHY WE NEED IT: After an edit, delete, cancel, or page change, this
-     *   redraws the list so the page matches the data, with no page refresh.
+     * LOGIC: If the list is empty, show the right "no bookings" message.
+     *   Otherwise, build one card per booking and put them all on the page
+     *   at once.
+     * WHY WE NEED IT: After an edit, delete, cancel, page change, or filter
+     *   change, this redraws the list so the page matches the data, with no
+     *   page refresh.
      * LEARNING GAP: replaceChildren() swaps out all the old cards in one
      *   step, so the page never shows a half-updated list.
+     *   Week 5 PR 2: when a filter is on, the empty message says "No
+     *   bookings match these filters." so the user knows to change or clear
+     *   the filters, instead of thinking there are no bookings at all.
      */
     const renderBookings = () => {
         if (emptyEl) {
+            emptyEl.textContent = hasActiveFilters()
+                ? 'No bookings match these filters.'
+                : 'No bookings yet.';
             emptyEl.hidden = bookings.length !== 0;
         }
 
@@ -300,7 +364,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      * LEARNING GAP: The buttons follow the info card from the SERVER
      *   (hasNextPage, hasPreviousPage). The page does not count bookings
      *   itself, so the buttons are always right, even for a normal user who
-     *   only sees their own bookings.
+     *   only sees their own bookings, and even when filters are on.
      */
     const renderPagination = () => {
         if (!paginationEl || !pagination) {
@@ -319,17 +383,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     /*
+     * PLAIN ENGLISH: Build the web address for one page of bookings, with
+     *   the current filters added.
+     * LOGIC: URLSearchParams builds the part after the "?". page and limit
+     *   are always added. Each filter is added only if it is not empty.
+     * WHY WE NEED IT: Issue #43 asks for the filters to be sent to
+     *   /api/bookings, and the paged results must keep the filters when the
+     *   user clicks Previous or Next.
+     * LEARNING GAP: URLSearchParams also makes each value safe to put in a
+     *   web address (for example, it changes spaces to %20), so we do not
+     *   have to do that by hand.
+     *   Leaving out empty filters keeps the address short and means "not
+     *   used," which the API treats the same as not sending it.
+     */
+    const buildBookingsUrl = (page) => {
+        const params = new URLSearchParams({
+            page: String(page),
+            limit: String(PAGE_SIZE)
+        });
+
+        Object.entries(filters).forEach(([name, value]) => {
+            if (value) {
+                params.set(name, value);
+            }
+        });
+
+        return `/api/bookings?${params.toString()}`;
+    };
+
+    /*
      * PLAIN ENGLISH: Ask the API for one page of bookings and show it.
-     * LOGIC: Call /api/bookings?page=X&limit=10. Check the answer has a
+     * LOGIC: Call the address from buildBookingsUrl. Check the answer has a
      *   bookings list. Save the list, the info card, and the page number,
      *   then redraw the cards and the page bar. If the page came back empty
      *   but earlier pages exist (for example, after deleting the last
      *   booking on the last page), load the new last page instead.
-     * WHY WE NEED IT: Opening the page, clicking Previous or Next, and
-     *   deleting a booking all need a fresh page from the server.
-     * LEARNING GAP: The API now sends { bookings: [...], pagination: {...} },
-     *   the same shape as the trains API, so we read data.bookings. Before
-     *   Week 5 it sent a plain list [ ... ].
+     * WHY WE NEED IT: Opening the page, clicking Previous or Next, applying
+     *   or clearing filters, and deleting a booking all need a fresh page
+     *   from the server.
+     * LEARNING GAP: The API sends { bookings: [...], pagination: {...},
+     *   query: {...} }, the same shape as the trains API, so we read
+     *   data.bookings. The page does not need the query card to draw the
+     *   list, because it already knows which filters it sent.
      *   Both page buttons are turned off while waiting, so a quick double
      *   click cannot ask for two pages at once.
      *   If something fails, this throws an error, and the code that called
@@ -341,7 +436,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             nextButtonEl.disabled = true;
         }
 
-        const response = await fetch(`/api/bookings?page=${page}&limit=${PAGE_SIZE}`);
+        const response = await fetch(buildBookingsUrl(page));
         if (!response.ok) {
             const reason = await readErrorMessage(response, `Failed to load bookings (${response.status})`);
             throw new Error(reason);
@@ -373,6 +468,8 @@ document.addEventListener('DOMContentLoaded', async () => {
      * LEARNING GAP: One helper for both buttons keeps the steps the same.
      *   scrollIntoView brings the top of the list back into view, so the
      *   user does not stay at the bottom of the page after clicking Next.
+     *   The filters stay the same, because loadBookings always uses the
+     *   filters in memory.
      */
     const goToPage = async (page) => {
         editingId = null;
@@ -390,6 +487,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (prevButtonEl && nextButtonEl) {
         prevButtonEl.addEventListener('click', () => goToPage(currentPage - 1));
         nextButtonEl.addEventListener('click', () => goToPage(currentPage + 1));
+    }
+
+    /*
+     * PLAIN ENGLISH: Use new filters and show page 1 of the results.
+     * LOGIC: Remember the old filters. Save the new ones, close any open
+     *   edit form, hide old messages, and load page 1. If the server says
+     *   no (for example, 400 "startDate must be on or before endDate"),
+     *   show its reason in red and go back to the old filters.
+     * WHY WE NEED IT: Issue #43 says applying or clearing filters goes back
+     *   to page 1, and bad filters get a clear message.
+     * LEARNING GAP: Why page 1? If you were on page 3 of ALL bookings and
+     *   filter down to 4 premium bookings, there is no page 3 anymore.
+     *   Going back to the old filters on an error keeps Previous and Next
+     *   working with the last list that loaded successfully.
+     *   The server is the one that checks the dates. The page does not
+     *   repeat that check, so the rules live in one place.
+     */
+    const applyFilters = async (newFilters) => {
+        const previousFilters = filters;
+        filters = newFilters;
+        editingId = null;
+
+        if (messageEl) {
+            messageEl.hidden = true;
+        }
+
+        try {
+            await loadBookings(1);
+        } catch (error) {
+            console.error('Error applying filters:', error);
+            filters = previousFilters;
+            showMessage(error.message || 'Could not apply the filters. Please try again.', true);
+            renderPagination();
+        }
+    };
+
+    /*
+     * PLAIN ENGLISH: Handle the Apply and Clear buttons on the filter bar.
+     * LOGIC: Apply: stop the normal form submit, read the three boxes, and
+     *   apply them. Clear: empty the boxes with reset() and apply "no
+     *   filters."
+     * LEARNING GAP: event.preventDefault() stops the browser from reloading
+     *   the page, the same as the edit form's Save button. Pressing Enter
+     *   in a box also submits the form, so it works like clicking Apply.
+     */
+    if (filterFormEl && filterClassEl && filterStartEl && filterEndEl) {
+        filterFormEl.addEventListener('submit', (event) => {
+            event.preventDefault();
+            applyFilters({
+                ticketClass: filterClassEl.value,
+                startDate: filterStartEl.value,
+                endDate: filterEndEl.value
+            });
+        });
+
+        if (clearButtonEl) {
+            clearButtonEl.addEventListener('click', () => {
+                filterFormEl.reset();
+                applyFilters({ ticketClass: '', startDate: '', endDate: '' });
+            });
+        }
     }
 
     /*
@@ -546,12 +704,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /*
      * PLAIN ENGLISH: Load everything when the page opens.
-     * LOGIC: Get the ticket class choices, then page 1 of the bookings.
-     *   Hide "Loading" either way. If the bookings request fails, show a
-     *   friendly error message instead.
+     * LOGIC: Get the ticket class choices (for the edit form and the filter
+     *   dropdown), then page 1 of the bookings with no filters. Hide
+     *   "Loading" either way. If the bookings request fails, show a friendly
+     *   error message instead.
      * LEARNING GAP: The page only ever asks for ONE page of bookings. It
      *   never downloads all of them and hides the rest. The server decides
-     *   which 10 to send.
+     *   which 10 to send, and the server does the filtering too.
      */
     try {
         await loadTicketClasses();

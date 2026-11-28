@@ -627,8 +627,8 @@ router.get('/stations/:id', getStationById);
  * @openapi
  * /bookings:
  *   get:
- *     summary: Get one page of bookings for the logged-in user
- *     description: Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Sorted by booking date, newest first. Returns one page at a time, plus page info. The Bookings Admin page uses this to fill in its list.
+ *     summary: Get one page of bookings for the logged-in user, with optional filters
+ *     description: Requires login. Admins get every booking. Other users get only the bookings where their email matches one of the passengers (capital letters do not matter). Sorted by booking date, newest first. Returns one page at a time, plus page info and a query info card. Can be narrowed by ticket class and by booking date range. Filters can be used alone or together, and they never let a normal user see someone else's bookings. The Bookings Admin page uses this to fill in its list.
  *     tags:
  *       - Bookings
  *     parameters:
@@ -649,9 +649,32 @@ router.get('/stations/:id', getStationById);
  *           maximum: 50
  *           default: 10
  *         description: The most bookings to return on one page.
+ *       - in: query
+ *         name: ticketClass
+ *         required: false
+ *         schema:
+ *           type: string
+ *           example: premium
+ *         description: Show only bookings with this ticket class. Must be a real ticket class from the ticket classes collection (standard, premium, or first). Capital letters do not matter.
+ *       - in: query
+ *         name: startDate
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: '2026-11-01'
+ *         description: Show only bookings made on or after the start of this day (UTC). Format YYYY-MM-DD.
+ *       - in: query
+ *         name: endDate
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: '2026-11-30'
+ *         description: Show only bookings made on or before the END of this day (UTC). Format YYYY-MM-DD. Must not be before startDate.
  *     responses:
  *       '200':
- *         description: Successfully retrieved one page of bookings. A page past the end returns an empty bookings list.
+ *         description: Successfully retrieved one page of bookings. A page past the end, or filters that match nothing, return an empty bookings list.
  *         content:
  *           application/json:
  *             schema:
@@ -713,8 +736,38 @@ router.get('/stations/:id', getStationById);
  *                     hasPreviousPage:
  *                       type: boolean
  *                       example: false
+ *                 query:
+ *                   type: object
+ *                   description: Which filters and sorting were used. Same shape as the Trains search. Filters that were not used are null.
+ *                   properties:
+ *                     search:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Always null. Booking Admin has no keyword search.
+ *                       example: null
+ *                     filters:
+ *                       type: object
+ *                       properties:
+ *                         ticketClass:
+ *                           type: string
+ *                           nullable: true
+ *                           example: premium
+ *                         startDate:
+ *                           type: string
+ *                           nullable: true
+ *                           example: '2026-11-01'
+ *                         endDate:
+ *                           type: string
+ *                           nullable: true
+ *                           example: '2026-11-30'
+ *                     sortBy:
+ *                       type: string
+ *                       example: createdAt
+ *                     sortOrder:
+ *                       type: string
+ *                       example: desc
  *       '400':
- *         description: Invalid page or limit.
+ *         description: Invalid page or limit, a ticket class that does not exist, a date that is not a real YYYY-MM-DD date, a startDate after the endDate, or a filter sent more than once.
  *         content:
  *           application/json:
  *             schema:
@@ -722,7 +775,7 @@ router.get('/stations/:id', getStationById);
  *               properties:
  *                 error:
  *                   type: string
- *                   example: Page and limit must be positive integers.
+ *                   example: startDate must be on or before endDate.
  *       '401':
  *         description: Not logged in.
  *       '500':
@@ -730,16 +783,21 @@ router.get('/stations/:id', getStationById);
  */
 /*
  * PLAIN ENGLISH: The address the Booking Admin page calls to get ONE PAGE
- *   of bookings for whoever is logged in.
+ *   of bookings for whoever is logged in, narrowed by any filters.
  * LOGIC: requireApiLogin runs first and sends 401 if nobody is logged in.
- *   Then getAllBookings reads page and limit, sends 400 if they are bad,
- *   and sends back { bookings, pagination }.
+ *   Then getAllBookings checks page, limit, ticketClass, startDate, and
+ *   endDate, sends 400 if any are bad, and sends back
+ *   { bookings, pagination, query }.
  * WHY WE NEED IT: Bookings (issue #16) created /api/bookings. Feature Set 4
- *   (issue #19) made each person see the right list. Week 5 (issue #35)
- *   adds paging, 10 at a time, sorted by booking date.
+ *   (issue #19) made each person see the right list. Week 5 adds paging,
+ *   10 at a time, sorted by booking date (issue #35), and filtering by
+ *   ticket class and booking date range (issue #43).
  * LEARNING GAP: The @openapi notes above are only comments. They do not
  *   change how the code runs. npm run swagger reads them and rebuilds
  *   swagger.json, which is what the /api-docs page shows.
+ *   The route line itself did not change for filtering. The filters arrive
+ *   in the same web address (after the "?"), so the same route handles
+ *   them. Only the controller learned to read them.
  *   This file only writes '/bookings'. The '/api' in front is added by
  *   src/routes/router.js.
  * DATA COMES FROM: getAllBookings in src/controllers/bookings.js, which
