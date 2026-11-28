@@ -787,14 +787,33 @@ router.delete('/bookings/:id', requireApiLogin, deleteBooking);
  *     summary: Get a paginated user list
  *     description: >
  *       Returns a paginated user list sorted by username. Administrators
- *       receive all users. Other authenticated users receive only their own
- *       account. Valid requests with no users on the requested page return
- *       an empty users array and pagination metadata.
+ *       can filter users by role and search display names, usernames, and
+ *       email addresses. Other authenticated users receive only their own
+ *       account, with the same filters applied. Valid requests with no
+ *       matching users return an empty users array and pagination metadata.
  *     tags:
  *       - Users
  *     security:
  *       - cookieAuth: []
  *     parameters:
+ *       - in: query
+ *         name: search
+ *         required: false
+ *         schema:
+ *           type: string
+ *           maxLength: 50
+ *         description: >
+ *           Keyword search across display names, usernames, and email
+ *           addresses. Values longer than 50 characters are rejected.
+ *       - in: query
+ *         name: role
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - customer
+ *             - admin
+ *         description: Filter users by role.
  *       - in: query
  *         name: page
  *         required: false
@@ -876,6 +895,17 @@ router.delete('/bookings/:id', requireApiLogin, deleteBooking);
  *                 query:
  *                   type: object
  *                   properties:
+ *                     search:
+ *                       type: string
+ *                     filters:
+ *                       type: object
+ *                       properties:
+ *                         role:
+ *                           type: string
+ *                           nullable: true
+ *                           enum:
+ *                             - customer
+ *                             - admin
  *                     sortBy:
  *                       type: string
  *                       enum:
@@ -895,10 +925,13 @@ router.delete('/bookings/:id', requireApiLogin, deleteBooking);
  *                 hasNextPage: true
  *                 hasPreviousPage: false
  *               query:
+ *                 search: ""
+ *                 filters:
+ *                   role: null
  *                 sortBy: username
  *                 sortOrder: asc
  *       '400':
- *         description: Invalid pagination or sorting parameters.
+ *         description: Invalid search, role, pagination, or sorting parameters.
  *         content:
  *           application/json:
  *             schema:
@@ -912,6 +945,13 @@ router.delete('/bookings/:id', requireApiLogin, deleteBooking);
  *                     type: string
  *                     enum:
  *                       - username
+ *                 allowedRoles:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                     enum:
+ *                       - customer
+ *                       - admin
  *             examples:
  *               invalidPagination:
  *                 summary: Invalid page or limit
@@ -927,6 +967,21 @@ router.delete('/bookings/:id', requireApiLogin, deleteBooking);
  *                 summary: Unsupported sort direction
  *                 value:
  *                   error: Sort order must be asc or desc.
+ *               invalidSearch:
+ *                 summary: Search text exceeds the maximum length
+ *                 value:
+ *                   error: Search must not exceed 50 characters.
+ *               invalidRole:
+ *                 summary: Unsupported role
+ *                 value:
+ *                   error: Invalid role.
+ *                   allowedRoles:
+ *                     - customer
+ *                     - admin
+ *               invalidSearchType:
+ *                 summary: Search or role is not a string
+ *                 value:
+ *                   error: Search and role parameters must be strings.
  *       '401':
  *         description: Authentication is required.
  *       '500':

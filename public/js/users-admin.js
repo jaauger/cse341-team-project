@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const previousEl = document.getElementById('users-prev');
     const nextEl = document.getElementById('users-next');
     const pageInfoEl = document.getElementById('users-page-info');
+    const controlsEl = document.getElementById('users-controls');
+    const searchEl = document.getElementById('users-search');
+    const roleEl = document.getElementById('users-role');
     const sortOrderEl = document.getElementById('users-sort-order');
 
     if (!pageEl || !listEl || !templateEl) {
@@ -21,6 +24,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemsPerPage = 10;
     let currentPage = 1;
     let activeRequest = null;
+    let activeCriteria = {
+        search: '',
+        role: '',
+        sortOrder: 'asc'
+    };
+
+    const getCriteria = () => ({
+        search: searchEl?.value.trim() || '',
+        role: roleEl?.value || '',
+        sortOrder: sortOrderEl?.value || 'asc'
+    });
+
+    const setControlsDisabled = (disabled) => {
+        controlsEl?.querySelectorAll('input, select, button')
+            .forEach((control) => {
+                control.disabled = disabled;
+            });
+    };
 
     const showSuccess = (message) => {
         if (!successEl) {
@@ -165,16 +186,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const buildQuery = (page) => {
-        const sortOrder = isAdmin && sortOrderEl
-            ? sortOrderEl.value
-            : 'asc';
-
-        return new URLSearchParams({
+        const params = new URLSearchParams({
             page: String(page),
             limit: String(itemsPerPage),
             sortBy: 'username',
-            sortOrder
-        }).toString();
+            sortOrder: activeCriteria.sortOrder
+        });
+
+        if (activeCriteria.search) {
+            params.set('search', activeCriteria.search);
+        }
+
+        if (activeCriteria.role) {
+            params.set('role', activeCriteria.role);
+        }
+
+        return params.toString();
     };
 
     const loadUsers = async (page = 1) => {
@@ -191,9 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         previousEl.disabled = true;
         nextEl.disabled = true;
 
-        if (sortOrderEl) {
-            sortOrderEl.disabled = true;
-        }
+        setControlsDisabled(true);
 
         try {
             const response = await fetch(
@@ -256,12 +281,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadingEl.hidden = true;
                 activeRequest = null;
 
-                if (sortOrderEl) {
-                    sortOrderEl.disabled = false;
-                }
+                setControlsDisabled(false);
             }
         }
     };
+
+    const applyCriteria = () => {
+        activeCriteria = getCriteria();
+        loadUsers(1);
+    };
+
+    if (controlsEl) {
+        controlsEl.addEventListener('submit', (event) => {
+            event.preventDefault();
+            applyCriteria();
+        });
+
+        controlsEl.addEventListener('reset', (event) => {
+            event.preventDefault();
+            searchEl.value = '';
+            roleEl.value = '';
+            sortOrderEl.value = 'asc';
+            applyCriteria();
+        });
+    }
 
     previousEl.addEventListener('click', () => {
         if (currentPage > 1) {
@@ -275,11 +318,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    if (sortOrderEl) {
-        sortOrderEl.addEventListener('change', () => {
-            loadUsers(1);
+    [roleEl, sortOrderEl].filter(Boolean).forEach((control) => {
+        control.addEventListener('change', () => {
+            applyCriteria();
         });
-    }
+    });
 
     loadUsers();
 });

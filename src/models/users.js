@@ -17,8 +17,8 @@ const getUsers = async () => {
         .populate('role');
 };
 
-const getPaginatedUsers = async ({ skip, limit, sortDirection }) => {
-    return await User.find({})
+const getPaginatedUsers = async ({ filter = {}, skip, limit, sortDirection }) => {
+    return await User.find(filter)
         .collation({ locale: 'en', strength: 2 })
         .sort({ username: sortDirection, _id: 1 })
         .skip(skip)
@@ -26,8 +26,8 @@ const getPaginatedUsers = async ({ skip, limit, sortDirection }) => {
         .populate('role');
 };
 
-const countUsers = async () => {
-    return await User.countDocuments({});
+const countUsers = async (filter = {}) => {
+    return await User.countDocuments(filter);
 };
 
 const getUserById = async (id) => {
