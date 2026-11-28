@@ -4,16 +4,19 @@
  * PLAIN ENGLISH: The Bookings Admin page. Admins see every booking. Everyone
  *   else who is logged in sees only the bookings where they are a passenger.
  *   Each booking can be edited or deleted from here. Bookings show 10 at a
- *   time, with Previous and Next buttons.
+ *   time, with Previous and Next buttons, and can be narrowed by ticket
+ *   class and booking date range.
  * LOGIC: This page opens EMPTY. It shows "Loading bookings..." first. Then
  *   public/js/bookings-admin.js calls /api/bookings?page=1&limit=10, copies
  *   the hidden template once per booking, fills it in, and shows the list.
  *   The Edit and Delete buttons call PUT and DELETE /api/bookings/:id. The
- *   Previous and Next buttons ask the API for another page.
+ *   Previous and Next buttons ask the API for another page. The filter bar
+ *   adds ticketClass, startDate, and endDate to that same API call.
  * WHY WE NEED IT: The Bookings feature (issue #16) created this page.
  *   Feature Set 4 (issue #19) adds login protection, the right list for each
- *   user, and the ability to update and delete bookings. Week 5 (issue #35)
- *   adds paging, 10 at a time, sorted by booking date.
+ *   user, and the ability to update and delete bookings. Week 5 adds paging,
+ *   10 at a time, sorted by booking date (issue #35), and filtering by
+ *   ticket class and booking date range (issue #43).
  * LEARNING GAP: There is no forEach loop over bookings in this file. That is
  *   on purpose. It follows the trains page (src/views/trains.ejs).
  *   Who may open this page is decided by the route lock in
@@ -29,11 +32,52 @@
     <h1>Bookings Admin</h1>
     <p>
         Admins see every booking. Everyone else sees the bookings where they
-        are a passenger. Newest bookings are first, 10 per page.
+        are a passenger. Newest bookings are first, 10 per page. Use the
+        filters to show one ticket class or a booking date range. Dates are
+        in UTC.
     </p>
 </section>
 
 <section class="bookings-catalog">
+    <%#
+     * PLAIN ENGLISH: The filter bar: pick a ticket class and/or a date range,
+     *   then click Apply. Clear shows all bookings again.
+     * LOGIC: The ticket class list starts with only "All classes." The
+     *   JavaScript adds the real classes from /api/ticket-classes. The two
+     *   date boxes are browser date pickers. Apply and Clear are handled by
+     *   the JavaScript, so the page never refreshes.
+     * WHY WE NEED IT: Week 5 Feature Set 3, PR 2 (issue #43) asks for
+     *   filtering by ticket class and booking date range.
+     * LEARNING GAP: type="date" sends the date as YYYY-MM-DD, which is the
+     *   exact format the API expects. So the page needs no date conversion.
+     *   role="search" tells screen readers "this form narrows the list."
+     *   An empty choice ("All classes," or an empty date box) means "do not
+     *   filter by this," and the JavaScript leaves it out of the API call.
+    %>
+    <form class="bookings-filters" id="bookings-filters" role="search" aria-label="Filter bookings">
+        <label>
+            Ticket Class
+            <select name="ticketClass" id="filter-ticket-class">
+                <option value="">All classes</option>
+            </select>
+        </label>
+
+        <label>
+            From (booking date)
+            <input type="date" name="startDate" id="filter-start-date">
+        </label>
+
+        <label>
+            To (booking date)
+            <input type="date" name="endDate" id="filter-end-date">
+        </label>
+
+        <div class="bookings-filter-actions">
+            <button type="submit" class="booking-button">Apply</button>
+            <button type="button" class="booking-button" id="bookings-clear-filters">Clear</button>
+        </div>
+    </form>
+
     <%#
      * PLAIN ENGLISH: The messages the page can show.
      * LOGIC: "Loading" shows first. The error, "no bookings," and action
@@ -41,7 +85,10 @@
      * LEARNING GAP: role="alert" makes screen readers read the error out
      *   loud. aria-live="polite" reads the other messages when they change.
      *   bookings-message is new for Feature Set 4. It says things like
-     *   "Booking KR-AB12CD was deleted" after an edit or delete.
+     *   "Booking KR-AB12CD was deleted" after an edit or delete. Week 5 PR 2
+     *   also uses it to show a filter error, like "startDate must be on or
+     *   before endDate." The "no bookings" text changes to "No bookings
+     *   match these filters." when a filter is being used.
     %>
     <div class="bookings-state" id="bookings-loading" aria-live="polite">Loading bookings...</div>
     <div class="bookings-state bookings-error" id="bookings-error" role="alert" hidden></div>
