@@ -7,13 +7,44 @@
 
 <section class="users-catalog">
     <% if (isAdmin) { %>
-        <div class="users-controls">
-            <label for="users-sort-order">Sort usernames</label>
-            <select id="users-sort-order" name="sortOrder">
-                <option value="asc">A to Z</option>
-                <option value="desc">Z to A</option>
-            </select>
-        </div>
+        <form class="users-controls" id="users-controls">
+            <div class="users-control-group">
+                <label for="users-search">Search users</label>
+                <input
+                    type="search"
+                    id="users-search"
+                    name="search"
+                    maxlength="50"
+                    placeholder="Search name, username, or email..."
+                    autocomplete="off">
+            </div>
+
+            <div class="users-control-group">
+                <label for="users-role">Filter by role</label>
+                <select id="users-role" name="role">
+                    <option value="">All roles</option>
+                    <option value="customer">Customer</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+
+            <div class="users-control-group">
+                <label for="users-sort-order">Sort usernames</label>
+                <select id="users-sort-order" name="sortOrder">
+                    <option value="asc">A to Z</option>
+                    <option value="desc">Z to A</option>
+                </select>
+            </div>
+
+            <div class="users-control-actions">
+                <button type="submit" id="users-apply">
+                    Apply
+                </button>
+                <button type="reset" id="users-reset">
+                    Reset
+                </button>
+            </div>
+        </form>
     <% } %>
 
     <div class="users-state" id="users-loading" aria-live="polite">

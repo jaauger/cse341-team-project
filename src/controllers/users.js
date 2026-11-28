@@ -1,12 +1,13 @@
 import {
     getPaginatedUsers as findPaginatedUsers,
     countUsers as countAllUsers,
-    getUserById as findUserById,
     updateUserRole as changeUserRole,
     deleteUser as removeUser
 } from '../models/users.js';
+import Role from '../models/schemas/roles.js';
 
 const MAX_LIMIT = 50;
+const MAX_TEXT_LENGTH = 50;
 
 const toPublicUser = (user) => {
     if (!user) {
@@ -29,8 +30,37 @@ const toPublicUser = (user) => {
 const getUsers = async (req, res) => {
     const pageParam = req.query.page ?? '1';
     const limitParam = req.query.limit ?? '10';
+    const searchParam = req.query.search ?? '';
+    const roleParam = req.query.role ?? '';
     const sortByParam = req.query.sortBy ?? 'username';
     const sortOrderParam = req.query.sortOrder ?? 'asc';
+
+    if (
+        typeof searchParam !== 'string' ||
+        typeof roleParam !== 'string'
+    ) {
+        return res.status(400).json({
+            error: 'Search and role parameters must be strings.'
+        });
+    }
+
+    const search = searchParam.trim();
+    const roleName = roleParam.trim();
+
+    if (search.length > MAX_TEXT_LENGTH) {
+        return res.status(400).json({
+            error: `Search must not exceed ${MAX_TEXT_LENGTH} characters.`
+        });
+    }
+
+    const allowedRoles = ['customer', 'admin'];
+
+    if (roleName && !allowedRoles.includes(roleName)) {
+        return res.status(400).json({
+            error: 'Invalid role.',
+            allowedRoles
+        });
+    }
 
     const isPositiveInteger = (value) =>
         typeof value === 'string' && /^[1-9]\d*$/.test(value);
@@ -82,19 +112,25 @@ const getUsers = async (req, res) => {
     const sortDirection = sortOrderParam === 'desc' ? -1 : 1;
 
     try {
-        let users;
-        let totalItems;
+        const filter = {};
 
-        if (req.user.role === 'admin') {
-            [users, totalItems] = await Promise.all([
-                findPaginatedUsers({ skip, limit, sortDirection }),
-                countAllUsers()
-            ]);
-        } else {
-            const user = await findUserById(req.user.id);
-            totalItems = user ? 1 : 0;
-            users = user && skip === 0 ? [user] : [];
+        if (search) {
+            filter.$text = { $search: search };
         }
+
+        if (roleName) {
+            const role = await Role.findOne({ name: roleName }).select('_id');
+            filter.role = role ? role._id : { $in: [] };
+        }
+
+        if (req.user.role !== 'admin') {
+            filter._id = req.user.id;
+        }
+
+        const [users, totalItems] = await Promise.all([
+            findPaginatedUsers({ filter, skip, limit, sortDirection }),
+            countAllUsers(filter)
+        ]);
 
         const totalPages = Math.ceil(totalItems / limit);
 
@@ -109,6 +145,10 @@ const getUsers = async (req, res) => {
                 hasPreviousPage: page > 1 && totalPages > 0
             },
             query: {
+                search,
+                filters: {
+                    role: roleName || null
+                },
                 sortBy: sortByParam,
                 sortOrder: sortOrderParam
             }

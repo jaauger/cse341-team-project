@@ -22,10 +22,27 @@
 
     .users-controls {
         display: flex;
-        align-items: center;
-        justify-content: flex-end;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        justify-content: flex-start;
         gap: var(--space-md);
         margin: var(--space-lg) 0;
+        padding: var(--space-lg);
+        border: 1px solid var(--clr-primary-light);
+        border-radius: var(--radius-lg);
+        background-color: var(--clr-surface);
+        box-shadow: var(--shadow-sm);
+
+        .users-control-group {
+            display: flex;
+            flex: 1 1 11rem;
+            flex-direction: column;
+            gap: var(--space-xs);
+        }
+
+        .users-control-group:first-child {
+            flex-grow: 2;
+        }
 
         label {
             color: var(--clr-text-primary);
@@ -33,7 +50,11 @@
             font-weight: 600;
         }
 
+        input,
         select {
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
             min-height: 42px;
             padding: var(--space-sm) var(--space-md);
             border: 1px solid var(--clr-primary-light);
@@ -50,6 +71,40 @@
             &:disabled {
                 cursor: not-allowed;
                 opacity: 0.6;
+            }
+        }
+
+        .users-control-actions {
+            display: flex;
+            align-items: flex-end;
+            gap: var(--space-sm);
+
+            button {
+                min-height: 42px;
+                padding: var(--space-sm) var(--space-md);
+                border: 1px solid var(--clr-primary);
+                border-radius: var(--radius-sm);
+                background-color: var(--clr-primary);
+                color: var(--clr-surface);
+                font: inherit;
+                font-size: var(--font-size-sm);
+                font-weight: 600;
+                cursor: pointer;
+
+                &:hover,
+                &:focus-visible {
+                    filter: brightness(0.9);
+                }
+
+                &:disabled {
+                    cursor: not-allowed;
+                    opacity: 0.6;
+                }
+            }
+
+            #users-reset {
+                background-color: var(--clr-surface);
+                color: var(--clr-text-primary);
             }
         }
     }
@@ -233,8 +288,13 @@
             align-items: stretch;
             flex-direction: column;
 
-            select {
+            .users-control-group,
+            .users-control-actions {
                 width: 100%;
+            }
+
+            .users-control-actions {
+                flex-direction: column;
             }
         }
 
